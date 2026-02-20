@@ -1,0 +1,96 @@
+[gd_scene format=3 uid="uid://do14kgbmsmo44"]
+
+[ext_resource type="Script" uid="uid://d3ernxe43kg8t" path="res://game_ui.gd" id="1_abc"]
+
+[node name="GameUI" type="CanvasLayer" unique_id=1356119558]
+script = ExtResource("1_abc")
+
+[node name="MainMenu" type="Control" parent="." unique_id=1885373230]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ColorRect" type="ColorRect" parent="MainMenu" unique_id=816343786]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.16078432, 0.17254902, 0.1882353, 1)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MainMenu" unique_id=1907966240]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Title" type="Label" parent="MainMenu/VBoxContainer" unique_id=1785459509]
+layout_mode = 2
+text = "Multiplayer Game"
+
+[node name="HostButton" type="Button" parent="MainMenu/VBoxContainer" unique_id=1513311322]
+layout_mode = 2
+text = "Host Game"
+
+[node name="IPInput" type="LineEdit" parent="MainMenu/VBoxContainer" unique_id=789268861]
+layout_mode = 2
+placeholder_text = "Server IP (e.g. 127.0.0.1)"
+
+[node name="JoinButton" type="Button" parent="MainMenu/VBoxContainer" unique_id=1564560914]
+layout_mode = 2
+text = "Join Game"
+
+[node name="StatusLabel" type="Label" parent="MainMenu/VBoxContainer" unique_id=762194513]
+layout_mode = 2
+
+[node name="NameInput" type="LineEdit" parent="MainMenu/VBoxContainer" unique_id=1834577862]
+layout_mode = 2
+placeholder_text = "Enter Player Name"
+
+[node name="GameHUD" type="Control" parent="." unique_id=593503832]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="GameHUD" unique_id=1888099419]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -47.0
+offset_top = -42.5
+offset_right = 47.0
+offset_bottom = 42.5
+grow_vertical = 0
+
+[node name="PlayerCountLabel" type="Label" parent="GameHUD/VBoxContainer" unique_id=1626134492]
+layout_mode = 2
+
+[node name="DisconnectButton" type="Button" parent="GameHUD/VBoxContainer" unique_id=890305566]
+layout_mode = 2
+text = "Disconnect"
+
+[node name="NameLabel" type="Label" parent="GameHUD/VBoxContainer" unique_id=1292652509]
+layout_mode = 2
+text = "Name:"
+
+[node name="Background" type="ColorRect" parent="GameHUD" unique_id=919398973]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0, 0, 0, 0.3)

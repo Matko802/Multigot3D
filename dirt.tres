@@ -1,0 +1,8 @@
+[gd_resource type="StandardMaterial3D" format=3 uid="uid://23gbqpqwcqbs"]
+
+[ext_resource type="Texture2D" uid="uid://dcj0cik5aobw7" path="res://textures/dirt.png" id="1_05lc2"]
+
+[resource]
+albedo_texture = ExtResource("1_05lc2")
+uv1_triplanar = true
+texture_filter = 0

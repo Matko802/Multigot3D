@@ -1,0 +1,10 @@
+[gd_resource type="StandardMaterial3D" format=3 uid="uid://cx5ekm3v4ocwu"]
+
+[ext_resource type="Texture2D" uid="uid://ca2pfrg801i2x" path="res://textures/grass_top.png" id="1_cphlf"]
+
+[resource]
+albedo_texture = ExtResource("1_cphlf")
+uv1_triplanar = true
+uv1_world_triplanar = true
+texture_filter = 0
+grow_amount = 2.51

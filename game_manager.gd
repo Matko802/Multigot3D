@@ -28,13 +28,23 @@ signal player_connected(peer_id: int)
 signal player_disconnected(peer_id: int)
 signal connection_failed(reason: String)
 signal server_disconnected()
+signal server_found(ip: String, port: int, info: Dictionary)
 
+@onready var network_discovery: NetworkDiscovery = $NetworkDiscovery
 @onready var players_container: Node = $"../Players"
 @onready var multiplayer_spawner: MultiplayerSpawner = $"../MultiplayerSpawner"
+
+var current_port: int = PORT
 
 func _ready() -> void:
 	# Load player scene
 	player_scene = load(PLAYER_SCENE_PATH)
+	
+	# Connect NetworkDiscovery signal
+	if network_discovery:
+		network_discovery.server_found.connect(_on_server_found)
+	else:
+		push_error("[GameManager] NetworkDiscovery node not found!")
 	
 	# Configure MultiplayerSpawner if nodes exist
 	if multiplayer_spawner and players_container:
@@ -78,8 +88,14 @@ func _setup_input_map() -> void:
 
 ## Start hosting a game (becomes server)
 func host_game() -> bool:
+	# Stop listening if we were
+	stop_discovery()
+	
+	# Pick a random port
+	current_port = randi_range(10000, 20000)
+
 	var peer := ENetMultiplayerPeer.new()
-	var err := peer.create_server(PORT, MAX_PLAYERS)
+	var err := peer.create_server(current_port, MAX_PLAYERS)
 	
 	if err != OK:
 		push_error("[GameManager] Failed to host: ", err)
@@ -90,7 +106,12 @@ func host_game() -> bool:
 	connection_state = ConnectionState.HOSTING
 	connection_state_changed.emit(connection_state)
 	
-	print("[GameManager] Hosting on port ", PORT)
+	print("[GameManager] Hosting on port ", current_port)
+	
+	# Start broadcasting presence
+	if network_discovery:
+		var server_name = "Game_" + str(randi() % 1000)
+		network_discovery.start_broadcasting(server_name, current_port)
 	
 	# Spawn the host player immediately (Server only)
 	_spawn_player(1)
@@ -98,12 +119,14 @@ func host_game() -> bool:
 	return true
 
 ## Join an existing game
-func join_game(address: String = SERVER_ADDRESS) -> bool:
+func join_game(address: String = SERVER_ADDRESS, port: int = PORT) -> bool:
 	if address.is_empty():
 		address = SERVER_ADDRESS
 		
+	stop_discovery() # Stop listening when joining
+	
 	var peer := ENetMultiplayerPeer.new()
-	var err := peer.create_client(address, PORT)
+	var err := peer.create_client(address, port)
 	
 	if err != OK:
 		push_error("[GameManager] Failed to join: ", err)
@@ -114,11 +137,13 @@ func join_game(address: String = SERVER_ADDRESS) -> bool:
 	connection_state = ConnectionState.JOINING
 	connection_state_changed.emit(connection_state)
 	
-	print("[GameManager] Joining ", address, ":", PORT)
+	print("[GameManager] Joining ", address, ":", port)
 	return true
 
 ## Disconnect from current game
 func disconnect_game() -> void:
+	stop_discovery() # Stop broadcasting if we were host
+	
 	if multiplayer.multiplayer_peer:
 		multiplayer.multiplayer_peer.close()
 		multiplayer.multiplayer_peer = null
@@ -131,6 +156,24 @@ func disconnect_game() -> void:
 	connection_state = ConnectionState.DISCONNECTED
 	connection_state_changed.emit(connection_state)
 	print("[GameManager] Disconnected")
+	
+	# Start listening again when disconnected
+	start_discovery_listening()
+
+# ==================== Network Discovery Wrappers ====================
+
+func start_discovery_listening() -> void:
+	if network_discovery:
+		network_discovery.start_listening()
+
+func stop_discovery() -> void:
+	if network_discovery:
+		network_discovery.stop_listening()
+		network_discovery.stop_broadcasting()
+
+func _on_server_found(ip: String, port: int, info: Dictionary) -> void:
+	server_found.emit(ip, port, info)
+
 
 ## Spawn a player for a specific peer (Server Only)
 ## MultiplayerSpawner will automatically replicate this to all clients
@@ -210,12 +253,14 @@ func _on_connected_to_server() -> void:
 	# Client doesn't need to request spawn; server does it automatically on connect
 
 func _on_connection_failed() -> void:
+	multiplayer.multiplayer_peer = null
 	connection_state = ConnectionState.DISCONNECTED
 	connection_state_changed.emit(connection_state)
 	connection_failed.emit("Connection failed")
 	print("[GameManager] Connection failed")
 
 func _on_server_disconnected() -> void:
+	multiplayer.multiplayer_peer = null
 	connection_state = ConnectionState.DISCONNECTED
 	connection_state_changed.emit(connection_state)
 	server_disconnected.emit()

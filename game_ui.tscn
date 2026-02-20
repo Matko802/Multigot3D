@@ -44,16 +44,27 @@ text = "Host Game"
 layout_mode = 2
 placeholder_text = "Server IP (e.g. 127.0.0.1)"
 
-[node name="JoinButton" type="Button" parent="MainMenu/VBoxContainer" unique_id=1564560914]
-layout_mode = 2
-text = "Join Game"
-
 [node name="StatusLabel" type="Label" parent="MainMenu/VBoxContainer" unique_id=762194513]
 layout_mode = 2
 
 [node name="NameInput" type="LineEdit" parent="MainMenu/VBoxContainer" unique_id=1834577862]
 layout_mode = 2
 placeholder_text = "Enter Player Name"
+
+[node name="LobbyList" type="ItemList" parent="MainMenu/VBoxContainer" unique_id=2072426427]
+custom_minimum_size = Vector2(0, 300)
+layout_mode = 2
+
+[node name="LobbyControl" type="HBoxContainer" parent="MainMenu/VBoxContainer" unique_id=1862788299]
+layout_mode = 2
+
+[node name="RefreshButton" type="Button" parent="MainMenu/VBoxContainer/LobbyControl" unique_id=1731720285]
+layout_mode = 2
+text = "Refresh Lobbies"
+
+[node name="JoinSelectedButton" type="Button" parent="MainMenu/VBoxContainer/LobbyControl" unique_id=401765148]
+layout_mode = 2
+text = "Join Selected"
 
 [node name="GameHUD" type="Control" parent="." unique_id=593503832]
 layout_mode = 3
@@ -75,6 +86,7 @@ offset_left = -47.0
 offset_top = -42.5
 offset_right = 47.0
 offset_bottom = 42.5
+grow_horizontal = 2
 grow_vertical = 0
 
 [node name="PlayerCountLabel" type="Label" parent="GameHUD/VBoxContainer" unique_id=1626134492]
@@ -94,3 +106,28 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
 color = Color(0, 0, 0, 0.3)
+
+[node name="Reticle" type="Control" parent="." unique_id=478643172]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Dot" type="ColorRect" parent="Reticle" unique_id=1303146406]
+custom_minimum_size = Vector2(4, 4)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -2.0
+offset_top = -2.0
+offset_right = 2.0
+offset_bottom = 2.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(1, 1, 1, 0.8)

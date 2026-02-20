@@ -29,8 +29,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.7, 0)
 [node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="." unique_id=1156310748]
 replication_config = ExtResource("2_d85cr")
 
-[node name="playermodel" parent="." unique_id=496929017 instance=ExtResource("3_jfawc")]
-transform = Transform3D(0.7, 0, 1.2239188e-07, 0, 0.7, 0, -1.2239188e-07, 0, 0.7, 0, 0, 0)
+[node name="playermodel" parent="." unique_id=170211850 instance=ExtResource("3_jfawc")]
+transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, 0, 0, 0)
 
 [node name="StepAudio" type="AudioStreamPlayer3D" parent="." unique_id=1180590835]
 attenuation_model = 1

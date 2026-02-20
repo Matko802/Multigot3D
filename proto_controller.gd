@@ -18,7 +18,7 @@ extends CharacterBody3D
 
 @export_group("Speeds")
 ## Look around rotation speed.
-@export var look_speed : float = 0.002
+@export var look_speed : float = 0.0025
 ## Normal speed.
 @export var base_speed : float = 7.0
 ## Speed of jump.
@@ -70,6 +70,9 @@ var footstep_sounds : Array[AudioStream] = []
 @onready var step_audio: AudioStreamPlayer3D = $StepAudio
 @onready var name_label_3d: Label3D = $NameLabel3D
 
+var anim_player: AnimationPlayer
+@export var sync_anim_state: String = "idle"
+
 func _enter_tree() -> void:
 	var id = str(name).to_int()
 	if id > 0:
@@ -88,6 +91,10 @@ func _ready() -> void:
 		if model:
 			# Move model backward locally so camera is in front of face
 			model.position.z = 0.462
+		
+		# Hide name label for self so it doesn't obstruct view
+		if name_label_3d:
+			name_label_3d.visible = false
 
 	# Capture mouse automatically for our player
 	if not multiplayer.has_multiplayer_peer() or is_multiplayer_authority():
@@ -95,6 +102,24 @@ func _ready() -> void:
 	
 	check_input_mappings()
 	_update_name_label()
+	
+	# Find AnimationPlayer
+	var model = get_node_or_null("playermodel")
+	if model:
+		anim_player = _find_animation_player(model)
+		if anim_player:
+			if anim_player.has_animation("walking"):
+				anim_player.get_animation("walking").loop_mode = Animation.LOOP_LINEAR
+			if anim_player.has_animation("idle"):
+				anim_player.get_animation("idle").loop_mode = Animation.LOOP_LINEAR
+
+func _find_animation_player(node: Node) -> AnimationPlayer:
+	if node is AnimationPlayer:
+		return node
+	for child in node.get_children():
+		var res = _find_animation_player(child)
+		if res: return res
+	return null
 
 func _load_footstep_sounds() -> void:
 	var paths = [
@@ -111,10 +136,48 @@ func _load_footstep_sounds() -> void:
 
 func _process(delta: float) -> void:
 	_process_footsteps(delta)
+	
+	# Authority determines state
+	if is_multiplayer_authority():
+		_update_anim_state()
+	
+	# Everyone plays animation based on state
+	_apply_animation()
+
+func _update_anim_state() -> void:
+	# Use local velocity for authority
+	var h_vel = Vector3(velocity.x, 0, velocity.z).length()
+	
+	if not is_on_floor():
+		sync_anim_state = "jumping"
+	elif h_vel > 0.1:
+		sync_anim_state = "walking"
+	else:
+		sync_anim_state = "idle"
+
+func _apply_animation() -> void:
+	if not anim_player: return
+	
+	if sync_anim_state == "jumping":
+		if anim_player.current_animation != "jumping":
+			if anim_player.has_animation("jumping"):
+				anim_player.play("jumping")
+	elif sync_anim_state == "walking":
+		if anim_player.current_animation != "walking":
+			if anim_player.has_animation("walking"):
+				anim_player.play("walking")
+	else:
+		# idle
+		if anim_player.current_animation != "idle":
+			if anim_player.has_animation("idle"):
+				anim_player.play("idle")
+			else:
+				if anim_player.is_playing():
+					anim_player.stop()
 
 func _process_footsteps(delta: float) -> void:
 	# Only authority processes footsteps to avoid double playback
-	if not is_multiplayer_authority():
+	if multiplayer.has_multiplayer_peer() and not is_multiplayer_authority():
 		return
 	
 	if is_on_floor() and velocity.length() > 2.0:
@@ -124,7 +187,10 @@ func _process_footsteps(delta: float) -> void:
 		footstep_timer -= delta
 		if footstep_timer <= 0:
 			footstep_timer = current_interval
-			_play_footstep_rpc.rpc()
+			if multiplayer.has_multiplayer_peer():
+				_play_footstep_rpc.rpc()
+			else:
+				_play_footstep_rpc()
 	else:
 		footstep_timer = 0.05
 
@@ -140,23 +206,31 @@ func _play_footstep_rpc() -> void:
 	step_audio.play()
 	print("[Player ", name, "] Playing footstep. Authority: ", is_multiplayer_authority())
 
+func _input(event: InputEvent) -> void:
+	# Only process input for the player we control (skip check if no multiplayer active)
+	if multiplayer.has_multiplayer_peer() and not is_multiplayer_authority():
+		return
+	
+	# Look around
+	if mouse_captured and event is InputEventMouseMotion:
+		rotate_look(event.relative)
+
 func _unhandled_input(event: InputEvent) -> void:
 	# Only process input for the player we control (skip check if no multiplayer active)
 	if multiplayer.has_multiplayer_peer() and not is_multiplayer_authority():
 		return
 	
 	# Mouse capturing
-	if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
-		capture_mouse()
-	if Input.is_key_pressed(KEY_ESCAPE):
-		release_mouse()
-	
-	# Look around
-	if mouse_captured and event is InputEventMouseMotion:
-		rotate_look(event.relative)
-	
+	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+			capture_mouse()
+			
+	if event is InputEventKey:
+		if event.keycode == KEY_ESCAPE and event.pressed:
+			release_mouse()
+			
 	# Toggle freefly mode
-	if can_freefly and Input.is_action_just_pressed(input_freefly):
+	if can_freefly and event.is_action_pressed(input_freefly):
 		if not freeflying:
 			enable_freefly()
 		else:

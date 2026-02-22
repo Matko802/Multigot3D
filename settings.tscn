@@ -1,0 +1,240 @@
+[gd_scene format=3 uid="uid://bn8xr0e7bjkua"]
+
+[ext_resource type="Script" uid="uid://w73cadcuwm3j" path="res://settings_menu.gd" id="1_u7tqh"]
+
+[node name="SettingsMenu" type="Control" unique_id=566610093]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_u7tqh")
+
+[node name="Background" type="ColorRect" parent="." unique_id=1249682871]
+z_index = -1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.16078432, 0.17254902, 0.1882353, 0.39215687)
+
+[node name="PanelContainer" type="PanelContainer" parent="." unique_id=287315483]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(900, 600)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -450.0
+offset_top = -300.0
+offset_right = 450.0
+offset_bottom = 300.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer" unique_id=1340540219]
+layout_mode = 2
+
+[node name="TabContainer" type="TabContainer" parent="PanelContainer/VBoxContainer" unique_id=1477666811]
+layout_mode = 2
+current_tab = 0
+
+[node name="Controls" type="VBoxContainer" parent="PanelContainer/VBoxContainer/TabContainer" unique_id=1266310233]
+layout_mode = 2
+metadata/_tab_index = 0
+
+[node name="SensitivityContainer" type="HBoxContainer" parent="PanelContainer/VBoxContainer/TabContainer/Controls" unique_id=1091498832]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+
+[node name="Label" type="Label" parent="PanelContainer/VBoxContainer/TabContainer/Controls/SensitivityContainer" unique_id=1323929693]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+text = "Sensitivity"
+
+[node name="SensitivitySlider" type="HSlider" parent="PanelContainer/VBoxContainer/TabContainer/Controls/SensitivityContainer" unique_id=325182850]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(400, 0)
+layout_mode = 2
+min_value = 0.1
+max_value = 3.0
+step = 0.01
+value = 1.0
+
+[node name="SensitivityValue" type="Label" parent="PanelContainer/VBoxContainer/TabContainer/Controls/SensitivityContainer" unique_id=957542026]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+
+[node name="FOVContainer" type="HBoxContainer" parent="PanelContainer/VBoxContainer/TabContainer/Controls" unique_id=498574706]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+
+[node name="Label" type="Label" parent="PanelContainer/VBoxContainer/TabContainer/Controls/FOVContainer" unique_id=394600154]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+text = "FOV"
+
+[node name="FOVSlider" type="HSlider" parent="PanelContainer/VBoxContainer/TabContainer/Controls/FOVContainer" unique_id=190933470]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(400, 0)
+layout_mode = 2
+min_value = 50.0
+max_value = 110.0
+value = 75.0
+
+[node name="FOVValue" type="Label" parent="PanelContainer/VBoxContainer/TabContainer/Controls/FOVContainer" unique_id=662716635]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+
+[node name="InvertYContainer" type="HBoxContainer" parent="PanelContainer/VBoxContainer/TabContainer/Controls" unique_id=48397304]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+
+[node name="Label" type="Label" parent="PanelContainer/VBoxContainer/TabContainer/Controls/InvertYContainer" unique_id=1270439737]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+text = "Invert Y"
+
+[node name="InvertYToggle" type="CheckButton" parent="PanelContainer/VBoxContainer/TabContainer/Controls/InvertYContainer" unique_id=1707964005]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Audio" type="VBoxContainer" parent="PanelContainer/VBoxContainer/TabContainer" unique_id=1857278883]
+visible = false
+layout_mode = 2
+metadata/_tab_index = 1
+
+[node name="MasterVolumeContainer" type="HBoxContainer" parent="PanelContainer/VBoxContainer/TabContainer/Audio" unique_id=1309922948]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+
+[node name="Label" type="Label" parent="PanelContainer/VBoxContainer/TabContainer/Audio/MasterVolumeContainer" unique_id=2081795392]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+text = "Master Volume"
+
+[node name="MasterVolumeSlider" type="HSlider" parent="PanelContainer/VBoxContainer/TabContainer/Audio/MasterVolumeContainer" unique_id=761389289]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(400, 0)
+layout_mode = 2
+max_value = 1.0
+value = 1.0
+
+[node name="MasterVolumeValue" type="Label" parent="PanelContainer/VBoxContainer/TabContainer/Audio/MasterVolumeContainer" unique_id=1647812832]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+
+[node name="EffectsVolumeContainer" type="HBoxContainer" parent="PanelContainer/VBoxContainer/TabContainer/Audio" unique_id=1955855977]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+
+[node name="Label" type="Label" parent="PanelContainer/VBoxContainer/TabContainer/Audio/EffectsVolumeContainer" unique_id=1605407242]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+text = "Effects Volume"
+
+[node name="EffectsVolumeSlider" type="HSlider" parent="PanelContainer/VBoxContainer/TabContainer/Audio/EffectsVolumeContainer" unique_id=1796570596]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(400, 0)
+layout_mode = 2
+max_value = 1.0
+value = 1.0
+
+[node name="EffectsVolumeValue" type="Label" parent="PanelContainer/VBoxContainer/TabContainer/Audio/EffectsVolumeContainer" unique_id=34953525]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+
+[node name="MuteContainer" type="HBoxContainer" parent="PanelContainer/VBoxContainer/TabContainer/Audio" unique_id=364433474]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+
+[node name="Label" type="Label" parent="PanelContainer/VBoxContainer/TabContainer/Audio/MuteContainer" unique_id=579907947]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+text = "Mute"
+
+[node name="MuteToggle" type="CheckButton" parent="PanelContainer/VBoxContainer/TabContainer/Audio/MuteContainer" unique_id=993384937]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Graphics" type="VBoxContainer" parent="PanelContainer/VBoxContainer/TabContainer" unique_id=1211120158]
+visible = false
+layout_mode = 2
+metadata/_tab_index = 2
+
+[node name="VSyncContainer" type="HBoxContainer" parent="PanelContainer/VBoxContainer/TabContainer/Graphics" unique_id=1458720080]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+
+[node name="Label" type="Label" parent="PanelContainer/VBoxContainer/TabContainer/Graphics/VSyncContainer" unique_id=1522688948]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+text = "VSync"
+
+[node name="VSyncToggle" type="CheckButton" parent="PanelContainer/VBoxContainer/TabContainer/Graphics/VSyncContainer" unique_id=236406746]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="FullscreenContainer" type="HBoxContainer" parent="PanelContainer/VBoxContainer/TabContainer/Graphics" unique_id=2112316702]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+
+[node name="Label" type="Label" parent="PanelContainer/VBoxContainer/TabContainer/Graphics/FullscreenContainer" unique_id=270171581]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+text = "Fullscreen Mode"
+
+[node name="FullscreenButton" type="Button" parent="PanelContainer/VBoxContainer/TabContainer/Graphics/FullscreenContainer" unique_id=2118595472]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 50)
+layout_mode = 2
+text = "Change Mode"
+
+[node name="FullscreenModeLabel" type="Label" parent="PanelContainer/VBoxContainer/TabContainer/Graphics/FullscreenContainer" unique_id=1973580829]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "Windowed"
+
+[node name="Gameplay" type="VBoxContainer" parent="PanelContainer/VBoxContainer/TabContainer" unique_id=2083386934]
+visible = false
+layout_mode = 2
+metadata/_tab_index = 3
+
+[node name="ShowNametagsContainer" type="HBoxContainer" parent="PanelContainer/VBoxContainer/TabContainer/Gameplay" unique_id=1982383297]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+
+[node name="Label" type="Label" parent="PanelContainer/VBoxContainer/TabContainer/Gameplay/ShowNametagsContainer" unique_id=396052033]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+text = "Show Nametags"
+
+[node name="ShowNametagsToggle" type="CheckButton" parent="PanelContainer/VBoxContainer/TabContainer/Gameplay/ShowNametagsContainer" unique_id=1672197736]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="ButtonContainer" type="HBoxContainer" parent="PanelContainer/VBoxContainer" unique_id=1340936339]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+
+[node name="ResetButton" type="Button" parent="PanelContainer/VBoxContainer/ButtonContainer" unique_id=2016133814]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 50)
+layout_mode = 2
+text = "Reset to Defaults"
+
+[node name="BackButton" type="Button" parent="PanelContainer/VBoxContainer/ButtonContainer" unique_id=1274384976]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 50)
+layout_mode = 2
+text = "Back"

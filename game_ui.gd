@@ -20,6 +20,13 @@ extends CanvasLayer
 @onready var lobby_list: ItemList = $MainMenu/VBoxContainer/LobbyList
 @onready var refresh_button: Button = $MainMenu/VBoxContainer/LobbyControl/RefreshButton
 
+@onready var settings_button: Button = %SettingsButton
+@onready var pause_menu: Control = %PauseMenu
+@onready var resume_button: Button = %ResumeButton
+@onready var pause_settings_button: Button = %PauseSettingsButton
+@onready var quit_button: Button = %QuitButton
+@onready var settings_menu: Control = $SettingsMenu
+
 var game_manager: GameManager
 var _pending_refresh: bool = false
 var _auto_refresh_timer: Timer
@@ -40,6 +47,12 @@ func _ready() -> void:
 	disconnect_button.pressed.connect(_on_disconnect_pressed)
 	refresh_button.pressed.connect(_on_refresh_pressed)
 	lobby_list.item_activated.connect(_on_lobby_activated)
+	
+	settings_button.pressed.connect(_on_settings_pressed)
+	resume_button.pressed.connect(_on_resume_pressed)
+	pause_settings_button.pressed.connect(_on_settings_pressed)
+	quit_button.pressed.connect(_on_disconnect_pressed)
+	settings_menu.close_requested.connect(_on_settings_closed)
 
 	game_manager.connection_status_changed.connect(_on_connection_status_changed)
 	GDSync.lobbies_received.connect(_on_lobbies_received)
@@ -66,19 +79,62 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	if game_manager.is_in_game():
-		# In-game: toggle HUD visibility based on mouse capture
-		if Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
+		if Input.is_action_just_pressed("ui_cancel"):
+			if settings_menu.visible:
+				# settings_menu.close() handles saving and emitting close_requested
+				# which triggers _on_settings_closed to restore menus
+				settings_menu.close() 
+			else:
+				_toggle_pause()
+		
+		if pause_menu.visible or settings_menu.visible:
 			game_hud.visible = false
-			reticle.visible = true
-		else:
-			game_hud.visible = true
 			reticle.visible = false
+			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+		else:
+			# In-game: toggle HUD visibility based on mouse capture
+			if Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
+				game_hud.visible = false
+				reticle.visible = true
+			else:
+				game_hud.visible = true
+				reticle.visible = false
 		player_count_label.text = "Players: %d" % game_manager.get_player_count()
 	else:
 		# Not in game — show menu if it's hidden
-		if not main_menu.visible:
+		if not main_menu.visible and not settings_menu.visible:
 			show_menu()
+		
+		# Allow toggling settings in main menu via ESC?
+		if Input.is_action_just_pressed("ui_cancel") and settings_menu.visible:
+			settings_menu.close()
 
+func _toggle_pause() -> void:
+	if pause_menu.visible:
+		pause_menu.visible = false
+		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+		# Ensure the player controller recaptures the mouse
+		get_tree().call_group("player_controllers", "capture_mouse")
+	else:
+		pause_menu.visible = true
+		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+
+func _on_settings_pressed() -> void:
+	settings_menu.open()
+	main_menu.visible = false
+	pause_menu.visible = false
+
+func _on_settings_closed() -> void:
+	if game_manager.is_in_game():
+		pause_menu.visible = true
+	else:
+		main_menu.visible = true
+
+func _on_resume_pressed() -> void:
+	pause_menu.visible = false
+	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	# Ensure the player controller recaptures the mouse
+	get_tree().call_group("player_controllers", "capture_mouse")
 
 # ── UI State ────────────────────────────────────────────────────────────────
 
@@ -86,6 +142,8 @@ func show_menu() -> void:
 	main_menu.visible = true
 	game_hud.visible = false
 	reticle.visible = false
+	pause_menu.visible = false
+	settings_menu.visible = false
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	# Resume auto-refresh when back on the menu
 	if _auto_refresh_timer and GDSync.is_active() and GDSync.get_client_id() >= 0:
@@ -97,6 +155,8 @@ func show_game() -> void:
 	main_menu.visible = false
 	game_hud.visible = true
 	reticle.visible = false
+	pause_menu.visible = false
+	settings_menu.visible = false
 	# Stop auto-refresh while in-game
 	if _auto_refresh_timer:
 		_auto_refresh_timer.stop()

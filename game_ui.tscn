@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://do14kgbmsmo44"]
 
 [ext_resource type="Script" uid="uid://d3ernxe43kg8t" path="res://game_ui.gd" id="1_abc"]
+[ext_resource type="PackedScene" uid="uid://bn8xr0e7bjkua" path="res://settings.tscn" id="2_mj8uy"]
 
 [node name="GameUI" type="CanvasLayer" unique_id=1356119558]
 script = ExtResource("1_abc")
@@ -69,6 +70,11 @@ text = "Refresh Lobbies"
 [node name="JoinSelectedButton" type="Button" parent="MainMenu/VBoxContainer/LobbyControl" unique_id=401765148]
 layout_mode = 2
 text = "Join Selected"
+
+[node name="SettingsButton" type="Button" parent="MainMenu/VBoxContainer" unique_id=1328350926]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Settings"
 
 [node name="GameHUD" type="Control" parent="." unique_id=593503832]
 layout_mode = 3
@@ -139,3 +145,49 @@ offset_bottom = 2.0
 grow_horizontal = 2
 grow_vertical = 2
 color = Color(1, 1, 1, 0.8)
+
+[node name="PauseMenu" type="Control" parent="." unique_id=1406245158]
+unique_name_in_owner = true
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Background" type="ColorRect" parent="PauseMenu" unique_id=446839001]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.16078432, 0.17254902, 0.1882353, 0.39215687)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="PauseMenu" unique_id=1020419560]
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+
+[node name="Label" type="Label" parent="PauseMenu/VBoxContainer" unique_id=205354925]
+layout_mode = 2
+text = "Paused"
+horizontal_alignment = 1
+
+[node name="ResumeButton" type="Button" parent="PauseMenu/VBoxContainer" unique_id=823888638]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Resume"
+
+[node name="PauseSettingsButton" type="Button" parent="PauseMenu/VBoxContainer" unique_id=952188286]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Settings"
+
+[node name="QuitButton" type="Button" parent="PauseMenu/VBoxContainer" unique_id=1659152026]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Disconnect"
+
+[node name="SettingsMenu" parent="." unique_id=566610093 instance=ExtResource("2_mj8uy")]
+unique_name_in_owner = true

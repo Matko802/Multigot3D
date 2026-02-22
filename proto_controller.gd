@@ -60,10 +60,16 @@ var footstep_sounds: Array[AudioStream] = []
 
 var anim_player: AnimationPlayer
 
+# Settings
+var sensitivity_modifier: float = 1.0
+var invert_y: bool = false
+const SETTINGS_FILE_PATH: String = "user://game_settings.cfg"
 
 # ── Lifecycle ───────────────────────────────────────────────────────────────
 
 func _ready() -> void:
+	add_to_group("player_controllers")
+	_load_settings()
 	_load_footstep_sounds()
 
 	# Expose the footstep RPC so remote clients can hear steps
@@ -80,6 +86,24 @@ func _ready() -> void:
 	_setup_for_ownership()
 	_update_name_label()
 	_find_anim_player()
+	
+	# Apply loaded settings
+	apply_loaded_settings()
+
+func apply_loaded_settings() -> void:
+	var config = ConfigFile.new()
+	var err = config.load(SETTINGS_FILE_PATH)
+	if err == OK:
+		# These are usually applied by the settings menu when it loads, 
+		# but if we spawn late, we need to grab them.
+		if config.has_section("settings"):
+			update_sensitivity(config.get_value("settings", "sensitivity", 1.0))
+			update_invert_y(config.get_value("settings", "invert_y", false))
+			update_fov(config.get_value("settings", "fov", 75.0))
+			update_base_speed(config.get_value("settings", "speed", 7.0))
+			# Nametags are updated via group call usually, but we can check
+			var show_tags = config.get_value("settings", "show_nametags", true)
+			update_nametags_visibility(show_tags)
 
 
 func _setup_for_ownership() -> void:
@@ -234,9 +258,14 @@ func _unhandled_input(event: InputEvent) -> void:
 # ── Look ────────────────────────────────────────────────────────────────────
 
 func _rotate_look(rot_input: Vector2) -> void:
-	look_rotation.x -= rot_input.y * look_speed
+	var effective_look_speed = look_speed * sensitivity_modifier
+	var y_input = rot_input.y
+	if invert_y:
+		y_input = -y_input
+		
+	look_rotation.x -= y_input * effective_look_speed
 	look_rotation.x = clampf(look_rotation.x, deg_to_rad(-85.0), deg_to_rad(85.0))
-	look_rotation.y -= rot_input.x * look_speed
+	look_rotation.y -= rot_input.x * effective_look_speed
 
 	transform.basis = Basis()
 	rotate_y(look_rotation.y)
@@ -304,3 +333,28 @@ func _play_footstep_remote() -> void:
 func _update_name_label() -> void:
 	if name_label_3d:
 		name_label_3d.text = player_name
+
+func update_sensitivity(value: float) -> void:
+	sensitivity_modifier = value
+
+func update_invert_y(value: bool) -> void:
+	invert_y = value
+
+func update_fov(value: float) -> void:
+	if camera:
+		camera.fov = value
+
+func update_base_speed(value: float) -> void:
+	base_speed = value
+
+func update_nametags_visibility(value: bool) -> void:
+	# Local player always hides own nametag (handled in _setup_for_ownership)
+	# This setting controls seeing OTHER players' nametags.
+	if not _is_local and name_label_3d:
+		name_label_3d.visible = value
+
+func _load_settings() -> void:
+	var config = ConfigFile.new()
+	var err = config.load(SETTINGS_FILE_PATH)
+	if err == OK:
+		sensitivity_modifier = config.get_value("settings", "sensitivity", 1.0)

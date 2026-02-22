@@ -29,7 +29,7 @@ albedo_color = Color(1, 1, 1, 0.36078432)
 
 [node name="Main" type="Node3D" unique_id=1741182025]
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=756008022]
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=756008022 groups=["world_environment"]]
 environment = SubResource("Environment_0xm2m")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1903313213]

@@ -21,9 +21,13 @@ run/main_scene="res://main.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus")
 config/icon="res://icon.svg"
 
+[autoload]
+
+GDSync="*uid://cn83v5cfafvei"
+
 [editor_plugins]
 
-enabled=PackedStringArray()
+enabled=PackedStringArray("res://addons/GD-Sync/plugin.cfg")
 
 [input]
 
@@ -70,6 +74,7 @@ move_right/events="[{\"input_event\":{\"class\":\"InputEventKey\",\"keycode\":68
 jump/events="[{\"input_event\":{\"class\":\"InputEventKey\",\"keycode\":32}}]"
 sprint/events="[{\"input_event\":{\"class\":\"InputEventKey\",\"keycode\":16777237}}]"
 freefly/events="[{\"input_event\":{\"class\":\"InputEventKey\",\"keycode\":70}}]"
+move_forward="{\"deadzone\": 0.2, \"events\": [{\"class\": \"InputEventKey\", \"physical_keycode\": 87}]}"
 
 [physics]
 
@@ -78,3 +83,4 @@ freefly/events="[{\"input_event\":{\"class\":\"InputEventKey\",\"keycode\":70}}]
 [rendering]
 
 rendering_device/driver.windows="d3d12"
+textures/vram_compression/import_etc2_astc=true

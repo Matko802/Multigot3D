@@ -7,7 +7,6 @@
 [ext_resource type="PackedScene" uid="uid://do14kgbmsmo44" path="res://game_ui.tscn" id="7_5vw27"]
 [ext_resource type="PackedScene" uid="uid://cxdcb5rh56ef" path="res://textures/Player cute.gltf" id="7_272bh"]
 [ext_resource type="Material" uid="uid://cx5ekm3v4ocwu" path="res://Grass.tres" id="8_5vw27"]
-[ext_resource type="Script" uid="uid://jyu0fr4hli3t" path="res://network_discovery.gd" id="8_kek77"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_7dm0k"]
 sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
@@ -304,14 +303,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 44, 0, 0)
 [node name="GameManager" type="Node" parent="." unique_id=1113130871]
 script = ExtResource("5_7mycd")
 
-[node name="NetworkDiscovery" type="Node" parent="GameManager" unique_id=1292076580]
-script = ExtResource("8_kek77")
-
 [node name="GameUI" parent="." unique_id=1396903435 instance=ExtResource("7_5vw27")]
 
 [node name="Players" type="Node3D" parent="." unique_id=528745499]
-
-[node name="MultiplayerSpawner" type="MultiplayerSpawner" parent="." unique_id=1784271385]
 
 [node name="playermodel" parent="." unique_id=1411462008 instance=ExtResource("7_272bh")]
 transform = Transform3D(0.7, 0, 1.2239188e-07, 0, 0.7, 0, -1.2239188e-07, 0, 0.7, 11.417719, 0.25862086, 0)

@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://sgac8s8lqxo6"]
 
 [ext_resource type="Script" uid="uid://ddk6n422to3qs" path="res://proto_controller.gd" id="1_ucva2"]
-[ext_resource type="SceneReplicationConfig" path="res://player_replication_config.tres" id="2_d85cr"]
+[ext_resource type="Script" uid="uid://bhrsc5nqnpq1o" path="res://addons/GD-Sync/Scripts/Types/PropertySynchronizer.gd" id="3_et5jn"]
 [ext_resource type="PackedScene" uid="uid://cxdcb5rh56ef" path="res://textures/Player cute.gltf" id="3_jfawc"]
 
 [sub_resource type="CylinderShape3D" id="CylinderShape3D_4rah4"]
@@ -11,11 +11,6 @@ height = 1.8208618
 script = ExtResource("1_ucva2")
 can_sprint = true
 can_freefly = true
-input_left = "move_left"
-input_right = "move_right"
-input_forward = "move_forward"
-input_back = "move_backward"
-input_jump = "jump"
 
 [node name="Collider" type="CollisionShape3D" parent="." unique_id=1095051060]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.89996946, 0)
@@ -26,16 +21,13 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.7, 0)
 
 [node name="Camera3D" type="Camera3D" parent="Head" unique_id=741892977]
 
-[node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="." unique_id=1156310748]
-replication_config = ExtResource("2_d85cr")
-
 [node name="playermodel" parent="." unique_id=170211850 instance=ExtResource("3_jfawc")]
 transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, 0, 0, 0)
 
 [node name="StepAudio" type="AudioStreamPlayer3D" parent="." unique_id=1180590835]
 attenuation_model = 1
-unit_size = 5.0
-max_distance = 30.0
+unit_size = 15.0
+max_distance = 90.0
 
 [node name="NameLabel3D" type="Label3D" parent="." unique_id=760979629]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, 2.0139606, 0)
@@ -43,3 +35,14 @@ billboard = 1
 shaded = true
 alpha_cut = 1
 texture_filter = 0
+
+[node name="PropertySynchronizer" type="Node" parent="." unique_id=1747806301]
+script = ExtResource("3_et5jn")
+broadcast = 2
+process = 1
+node_path = NodePath("..")
+properties = PackedStringArray("position", "basis", "player_name", "sync_anim_state")
+interpolated = true
+interpolation_speed = 20.0
+extrapolated = true
+max_extrapolation_time = 0.15

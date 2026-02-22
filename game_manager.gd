@@ -1,271 +1,253 @@
 class_name GameManager
 extends Node
 
-## GameManager - Handles multiplayer networking
-## Using MultiplayerSpawner for automatic node replication
+## GameManager - Handles multiplayer networking using GD-Sync.
+## Uses GDSync.multiplayer_instantiate for automatic node replication across clients.
 
-const PORT: int = 9999
-const MAX_PLAYERS: int = 8
-const SERVER_ADDRESS: String = "127.0.0.1"
-
-## Reference to the player scene
 const PLAYER_SCENE_PATH: String = "res://proto_controller.tscn"
-var player_scene: PackedScene
 
-## Current connection state
-enum ConnectionState {
-	DISCONNECTED,
-	HOSTING,
-	JOINING,
-	CONNECTED
-}
+@onready var players_container: Node3D = $"../Players"
 
-var connection_state: ConnectionState = ConnectionState.DISCONNECTED
+# Pending action state (host/join after connection completes)
+var _pending_action: String = ""
+var _pending_lobby_name: String = ""
+var _pending_local: bool = false
+var _local_username: String = "Player"
 
-## Signals for UI updates
-signal connection_state_changed(state: ConnectionState)
-signal player_connected(peer_id: int)
-signal player_disconnected(peer_id: int)
-signal connection_failed(reason: String)
-signal server_disconnected()
-signal server_found(ip: String, port: int, info: Dictionary)
+# Track our own spawned node so we don't double-spawn
+var _local_player_spawned: bool = false
 
-@onready var network_discovery: NetworkDiscovery = $NetworkDiscovery
-@onready var players_container: Node = $"../Players"
-@onready var multiplayer_spawner: MultiplayerSpawner = $"../MultiplayerSpawner"
+# Track whether we are the original host of the lobby
+var _is_host: bool = false
+var _host_client_id: int = -1
 
-var current_port: int = PORT
+signal connection_status_changed(status: String)
 
 func _ready() -> void:
-	# Load player scene
-	player_scene = load(PLAYER_SCENE_PATH)
-	
-	# Connect NetworkDiscovery signal
-	if network_discovery:
-		network_discovery.server_found.connect(_on_server_found)
-	else:
-		push_error("[GameManager] NetworkDiscovery node not found!")
-	
-	# Configure MultiplayerSpawner if nodes exist
-	if multiplayer_spawner and players_container:
-		multiplayer_spawner.spawn_path = players_container.get_path()
-		multiplayer_spawner.add_spawnable_scene(PLAYER_SCENE_PATH)
-	else:
-		push_error("[GameManager] Missing Players container or MultiplayerSpawner!")
-	
-	# Setup multiplayer signals
-	multiplayer.peer_connected.connect(_on_peer_connected)
-	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
-	multiplayer.connected_to_server.connect(_on_connected_to_server)
-	multiplayer.connection_failed.connect(_on_connection_failed)
-	multiplayer.server_disconnected.connect(_on_server_disconnected)
-	
 	_setup_input_map()
-	
+
+	# Connect GDSync signals
+	GDSync.connected.connect(_on_connected)
+	GDSync.connection_failed.connect(_on_connection_failed)
+	GDSync.lobby_created.connect(_on_lobby_created)
+	GDSync.lobby_creation_failed.connect(_on_lobby_creation_failed)
+	GDSync.lobby_joined.connect(_on_lobby_joined)
+	GDSync.lobby_join_failed.connect(_on_lobby_join_failed)
+	GDSync.client_joined.connect(_on_client_joined)
+	GDSync.client_left.connect(_on_client_left)
+	GDSync.disconnected.connect(_on_disconnected)
+	GDSync.kicked.connect(_on_kicked)
+	GDSync.host_changed.connect(_on_host_changed)
+
 	print("[GameManager] Ready")
 
+
+# ── Public API ──────────────────────────────────────────────────────────────
+
+func host_game(lobby_name: String, player_name: String, local: bool = false) -> void:
+	_local_username = player_name
+	_pending_lobby_name = lobby_name
+	_pending_action = "host"
+	_pending_local = local
+
+	connection_status_changed.emit("Connecting...")
+
+	if GDSync.is_active():
+		# Already connected — go straight to lobby creation
+		_process_pending_action()
+	else:
+		if local:
+			GDSync.start_local_multiplayer()
+		else:
+			GDSync.start_multiplayer()
+
+
+func join_game(lobby_name: String, player_name: String, local: bool = false) -> void:
+	_local_username = player_name
+	_pending_lobby_name = lobby_name
+	_pending_action = "join"
+	_pending_local = local
+
+	connection_status_changed.emit("Connecting...")
+
+	if GDSync.is_active():
+		_process_pending_action()
+	else:
+		if local:
+			GDSync.start_local_multiplayer()
+		else:
+			GDSync.start_multiplayer()
+
+
+func disconnect_game() -> void:
+	# Leave lobby first so server knows, then stop multiplayer
+	if GDSync.is_active() and is_in_lobby():
+		GDSync.lobby_leave()
+	GDSync.stop_multiplayer()
+	_cleanup_players()
+	_local_player_spawned = false
+	connection_status_changed.emit("Disconnected")
+
+
+func get_player_count() -> int:
+	return players_container.get_child_count()
+
+
+func is_in_lobby() -> bool:
+	return GDSync.is_active() and GDSync.lobby_get_name() != ""
+
+
+func is_in_game() -> bool:
+	return is_in_lobby()
+
+
+# ── Internal ────────────────────────────────────────────────────────────────
+
+func _process_pending_action() -> void:
+	if _pending_action == "":
+		return
+
+	# Always set username before creating/joining
+	GDSync.player_set_username(_local_username)
+
+	if _pending_action == "host":
+		connection_status_changed.emit("Creating lobby...")
+		GDSync.lobby_create(_pending_lobby_name, "", true, 0)
+	elif _pending_action == "join":
+		connection_status_changed.emit("Joining lobby...")
+		GDSync.lobby_join(_pending_lobby_name)
+
+	_pending_action = ""
+
+
+func _spawn_local_player() -> void:
+	if _local_player_spawned:
+		return
+
+	_local_player_spawned = true
+
+	var player_scene: PackedScene = load(PLAYER_SCENE_PATH)
+	# multiplayer_instantiate handles: instantiate locally + replicate to all
+	# other clients (current + future joiners via replicate_on_join=true).
+	var player: ProtoController = GDSync.multiplayer_instantiate(player_scene, players_container, true, [], true) as ProtoController
+
+	# Set GD-Sync ownership so only we control this player
+	GDSync.set_gdsync_owner(player, GDSync.get_client_id())
+
+	# Set initial position with some randomness so players don't stack
+	player.position = Vector3(randf_range(-3.0, 3.0), 5.0, randf_range(-3.0, 3.0))
+
+	# Set player_name — this gets synced via PropertySynchronizer's sync_starting_changes
+	player.player_name = _local_username
+
+	print("[GameManager] Spawned local player: ", player.name, " (client ", GDSync.get_client_id(), ")")
+
+
+func _cleanup_players() -> void:
+	for child in players_container.get_children():
+		child.queue_free()
+
+
+# ── Signal Callbacks ────────────────────────────────────────────────────────
+
+func _on_connected() -> void:
+	print("[GameManager] Connected to GD-Sync server")
+	_process_pending_action()
+
+
+func _on_connection_failed(error: int) -> void:
+	print("[GameManager] Connection failed: ", error)
+	connection_status_changed.emit("Connection failed (error %d)" % error)
+	_pending_action = ""
+
+
+func _on_disconnected() -> void:
+	print("[GameManager] Disconnected")
+	_cleanup_players()
+	_local_player_spawned = false
+	connection_status_changed.emit("Disconnected")
+
+
+func _on_lobby_created(lobby_name: String) -> void:
+	print("[GameManager] Lobby created: ", lobby_name)
+	_is_host = true
+	_host_client_id = GDSync.get_client_id()
+	# Always auto-join the lobby we just created
+	GDSync.lobby_join(lobby_name)
+
+
+func _on_lobby_creation_failed(lobby_name: String, error: int) -> void:
+	print("[GameManager] Lobby creation failed: ", lobby_name, " error: ", error)
+	connection_status_changed.emit("Lobby creation failed (error %d)" % error)
+
+
+func _on_lobby_joined(lobby_name: String) -> void:
+	print("[GameManager] Joined lobby: ", lobby_name)
+	connection_status_changed.emit("Playing in: " + lobby_name)
+	# Spawn our own player
+	_spawn_local_player()
+
+
+func _on_lobby_join_failed(lobby_name: String, error: int) -> void:
+	print("[GameManager] Lobby join failed: ", lobby_name, " error: ", error)
+	connection_status_changed.emit("Join failed (error %d)" % error)
+
+
+func _on_client_joined(client_id: int) -> void:
+	print("[GameManager] Client joined: ", client_id)
+	# Remote players are spawned automatically by GDSync's multiplayer_instantiate
+	# replication system (replicate_on_join=true). No manual action needed.
+
+
+func _on_client_left(client_id: int) -> void:
+	print("[GameManager] Client left: ", client_id)
+
+	# If the original host left, disconnect everyone from the lobby
+	if client_id == _host_client_id:
+		print("[GameManager] Host left the lobby — disconnecting all players.")
+		connection_status_changed.emit("Host left the lobby")
+		disconnect_game()
+		return
+
+	# Find and free any player whose gdsync owner matches the departed client.
+	# Nodes are named by GDID (not client_id), so we check ownership.
+	for child in players_container.get_children():
+		if GDSync.get_gdsync_owner(child) == client_id:
+			child.queue_free()
+			print("[GameManager] Removed player node for client: ", client_id)
+
+
+func _on_host_changed(is_host: bool, new_host_id: int) -> void:
+	print("[GameManager] Host changed: is_host=", is_host, " new_host_id=", new_host_id)
+	_is_host = is_host
+	_host_client_id = new_host_id
+
+
+func _on_kicked() -> void:
+	print("[GameManager] Kicked from lobby")
+	_cleanup_players()
+	_local_player_spawned = false
+	connection_status_changed.emit("Kicked from lobby")
+
+
+# ── Input Map Setup ─────────────────────────────────────────────────────────
+
 func _setup_input_map() -> void:
-	# Define default inputs if they are missing
-	var inputs = {
-		"move_forward": [KEY_W, KEY_UP],
+	var inputs: Dictionary = {
+		"move_foward": [KEY_W, KEY_UP],
 		"move_backward": [KEY_S, KEY_DOWN],
 		"move_left": [KEY_A, KEY_LEFT],
 		"move_right": [KEY_D, KEY_RIGHT],
 		"jump": [KEY_SPACE],
 		"sprint": [KEY_SHIFT],
-		"freefly": [KEY_F]
+		"freefly": [KEY_F],
 	}
-	
-	for action in inputs:
+
+	for action: String in inputs:
 		if not InputMap.has_action(action):
-			InputMap.add_action(action)
-			for key in inputs[action]:
-				var ev = InputEventKey.new()
-				ev.physical_keycode = key
+			InputMap.add_action(action, 0.2)
+		for key: int in inputs[action]:
+			var ev := InputEventKey.new()
+			ev.physical_keycode = key as Key
+			if not InputMap.action_has_event(action, ev):
 				InputMap.action_add_event(action, ev)
-				print("[GameManager] Added input action: ", action, " with key: ", key)
-
-
-## Start hosting a game (becomes server)
-func host_game() -> bool:
-	# Stop listening if we were
-	stop_discovery()
-	
-	# Pick a random port
-	current_port = randi_range(10000, 20000)
-
-	var peer := ENetMultiplayerPeer.new()
-	var err := peer.create_server(current_port, MAX_PLAYERS)
-	
-	if err != OK:
-		push_error("[GameManager] Failed to host: ", err)
-		connection_failed.emit("Failed to create server")
-		return false
-	
-	multiplayer.multiplayer_peer = peer
-	connection_state = ConnectionState.HOSTING
-	connection_state_changed.emit(connection_state)
-	
-	print("[GameManager] Hosting on port ", current_port)
-	
-	# Start broadcasting presence
-	if network_discovery:
-		var server_name = "Game_" + str(randi() % 1000)
-		network_discovery.start_broadcasting(server_name, current_port)
-	
-	# Spawn the host player immediately (Server only)
-	_spawn_player(1)
-	
-	return true
-
-## Join an existing game
-func join_game(address: String = SERVER_ADDRESS, port: int = PORT) -> bool:
-	if address.is_empty():
-		address = SERVER_ADDRESS
-		
-	stop_discovery() # Stop listening when joining
-	
-	var peer := ENetMultiplayerPeer.new()
-	var err := peer.create_client(address, port)
-	
-	if err != OK:
-		push_error("[GameManager] Failed to join: ", err)
-		connection_failed.emit("Failed to connect to server")
-		return false
-	
-	multiplayer.multiplayer_peer = peer
-	connection_state = ConnectionState.JOINING
-	connection_state_changed.emit(connection_state)
-	
-	print("[GameManager] Joining ", address, ":", port)
-	return true
-
-## Disconnect from current game
-func disconnect_game() -> void:
-	stop_discovery() # Stop broadcasting if we were host
-	
-	if multiplayer.multiplayer_peer:
-		multiplayer.multiplayer_peer.close()
-		multiplayer.multiplayer_peer = null
-	
-	# Clear all players from scene locally
-	# Since we disconnected, MultiplayerSpawner won't sync deletions, so we must clean up manually
-	for child in players_container.get_children():
-		child.queue_free()
-	
-	connection_state = ConnectionState.DISCONNECTED
-	connection_state_changed.emit(connection_state)
-	print("[GameManager] Disconnected")
-	
-	# Start listening again when disconnected
-	start_discovery_listening()
-
-# ==================== Network Discovery Wrappers ====================
-
-func start_discovery_listening() -> void:
-	if network_discovery:
-		network_discovery.start_listening()
-
-func stop_discovery() -> void:
-	if network_discovery:
-		network_discovery.stop_listening()
-		network_discovery.stop_broadcasting()
-
-func _on_server_found(ip: String, port: int, info: Dictionary) -> void:
-	server_found.emit(ip, port, info)
-
-
-## Spawn a player for a specific peer (Server Only)
-## MultiplayerSpawner will automatically replicate this to all clients
-func _spawn_player(peer_id: int) -> void:
-	if not is_server():
-		return
-		
-	# Check if player already exists
-	if players_container.has_node(str(peer_id)):
-		return
-		
-	var player := player_scene.instantiate()
-	player.name = str(peer_id)
-	player.set_multiplayer_authority(peer_id)
-	players_container.add_child(player, true) # true = force readable name
-	
-	# Set spawn position
-	var spawn_pos := _get_next_spawn_position(players_container.get_child_count() - 1)
-	player.global_position = spawn_pos
-	
-	print("[GameManager] Spawned player ", peer_id, " at ", spawn_pos)
-
-## Get spawn position for player index
-func _get_next_spawn_position(index: int) -> Vector3:
-	var spawn_points := [
-		Vector3(0, 2, 0),
-		Vector3(5, 2, 0),
-		Vector3(-5, 2, 0),
-		Vector3(0, 2, 5),
-		Vector3(0, 2, -5),
-		Vector3(5, 2, 5),
-		Vector3(-5, 2, 5),
-		Vector3(5, 2, -5),
-	]
-	return spawn_points[index % spawn_points.size()]
-
-## Get player count
-func get_player_count() -> int:
-	return players_container.get_child_count()
-
-## Check if we are the server
-func is_server() -> bool:
-	return multiplayer.is_server()
-
-## Check if we are in a game
-func is_in_game() -> bool:
-	return connection_state == ConnectionState.HOSTING or connection_state == ConnectionState.CONNECTED
-
-## Get our peer ID
-func get_my_peer_id() -> int:
-	return multiplayer.get_unique_id()
-
-# ==================== Multiplayer Signal Callbacks ====================
-
-func _on_peer_connected(peer_id: int) -> void:
-	print("[GameManager] Peer connected: ", peer_id)
-	player_connected.emit(peer_id)
-	
-	# Server handles spawning the new player
-	if is_server():
-		_spawn_player(peer_id)
-
-func _on_peer_disconnected(peer_id: int) -> void:
-	print("[GameManager] Peer disconnected: ", peer_id)
-	player_disconnected.emit(peer_id)
-	
-	# Server handles removing the player
-	if is_server():
-		var player = players_container.get_node_or_null(str(peer_id))
-		if player:
-			player.queue_free()
-
-func _on_connected_to_server() -> void:
-	connection_state = ConnectionState.CONNECTED
-	connection_state_changed.emit(connection_state)
-	print("[GameManager] Connected to server")
-	# Client doesn't need to request spawn; server does it automatically on connect
-
-func _on_connection_failed() -> void:
-	multiplayer.multiplayer_peer = null
-	connection_state = ConnectionState.DISCONNECTED
-	connection_state_changed.emit(connection_state)
-	connection_failed.emit("Connection failed")
-	print("[GameManager] Connection failed")
-
-func _on_server_disconnected() -> void:
-	multiplayer.multiplayer_peer = null
-	connection_state = ConnectionState.DISCONNECTED
-	connection_state_changed.emit(connection_state)
-	server_disconnected.emit()
-	print("[GameManager] Server disconnected")
-	
-	# Clean up players
-	for child in players_container.get_children():
-		child.queue_free()

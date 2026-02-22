@@ -38,11 +38,15 @@ text = "Multiplayer Game"
 
 [node name="HostButton" type="Button" parent="MainMenu/VBoxContainer" unique_id=1513311322]
 layout_mode = 2
-text = "Host Game"
+text = "Host Online"
+
+[node name="HostLANButton" type="Button" parent="MainMenu/VBoxContainer" unique_id=95860286]
+layout_mode = 2
+text = "Host LAN"
 
 [node name="IPInput" type="LineEdit" parent="MainMenu/VBoxContainer" unique_id=789268861]
 layout_mode = 2
-placeholder_text = "Server IP (e.g. 127.0.0.1)"
+placeholder_text = "Lobby Name"
 
 [node name="StatusLabel" type="Label" parent="MainMenu/VBoxContainer" unique_id=762194513]
 layout_mode = 2
@@ -99,6 +103,10 @@ text = "Disconnect"
 [node name="NameLabel" type="Label" parent="GameHUD/VBoxContainer" unique_id=1292652509]
 layout_mode = 2
 text = "Name:"
+
+[node name="PlayerList" type="ItemList" parent="GameHUD/VBoxContainer" unique_id=906393166]
+custom_minimum_size = Vector2(0, 150)
+layout_mode = 2
 
 [node name="Background" type="ColorRect" parent="GameHUD" unique_id=919398973]
 layout_mode = 0

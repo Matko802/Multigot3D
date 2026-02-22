@@ -45,6 +45,11 @@ func _ready() -> void:
 # ── Public API ──────────────────────────────────────────────────────────────
 
 func host_game(lobby_name: String, player_name: String, local: bool = false) -> void:
+	# LAN/local multiplayer is not available on web (no UDP support)
+	if local and OS.has_feature("web"):
+		connection_status_changed.emit("LAN mode is not available in web browsers.")
+		return
+
 	_local_username = player_name
 	_pending_lobby_name = lobby_name
 	_pending_action = "host"
@@ -52,9 +57,12 @@ func host_game(lobby_name: String, player_name: String, local: bool = false) -> 
 
 	connection_status_changed.emit("Connecting...")
 
-	if GDSync.is_active():
-		# Already connected — go straight to lobby creation
+	if GDSync.is_active() and GDSync.get_client_id() >= 0:
+		# Already connected and handshake complete — go straight to lobby creation
 		_process_pending_action()
+	elif GDSync.is_active():
+		# Connection in progress — wait for connected signal (pending action will fire then)
+		pass
 	else:
 		if local:
 			GDSync.start_local_multiplayer()
@@ -63,6 +71,11 @@ func host_game(lobby_name: String, player_name: String, local: bool = false) -> 
 
 
 func join_game(lobby_name: String, player_name: String, local: bool = false) -> void:
+	# LAN/local multiplayer is not available on web (no UDP support)
+	if local and OS.has_feature("web"):
+		connection_status_changed.emit("LAN mode is not available in web browsers.")
+		return
+
 	_local_username = player_name
 	_pending_lobby_name = lobby_name
 	_pending_action = "join"
@@ -70,8 +83,12 @@ func join_game(lobby_name: String, player_name: String, local: bool = false) -> 
 
 	connection_status_changed.emit("Connecting...")
 
-	if GDSync.is_active():
+	if GDSync.is_active() and GDSync.get_client_id() >= 0:
+		# Already connected and handshake complete
 		_process_pending_action()
+	elif GDSync.is_active():
+		# Connection in progress — wait for connected signal (pending action will fire then)
+		pass
 	else:
 		if local:
 			GDSync.start_local_multiplayer()
@@ -86,7 +103,13 @@ func disconnect_game() -> void:
 	GDSync.stop_multiplayer()
 	_cleanup_players()
 	_local_player_spawned = false
+	_is_host = false
+	_host_client_id = -1
 	connection_status_changed.emit("Disconnected")
+
+	# Re-establish background connection for lobby browsing (non-LAN only)
+	if not _pending_local:
+		GDSync.start_multiplayer()
 
 
 func get_player_count() -> int:
@@ -245,9 +268,17 @@ func _setup_input_map() -> void:
 
 	for action: String in inputs:
 		if not InputMap.has_action(action):
-			InputMap.add_action(action, 0.2)
+			InputMap.add_action(action)
+		# Set deadzone (safe even if action already existed)
+		InputMap.action_set_deadzone(action, 0.2)
 		for key: int in inputs[action]:
 			var ev := InputEventKey.new()
 			ev.physical_keycode = key as Key
-			if not InputMap.action_has_event(action, ev):
+			# Check if this exact event is already bound
+			var already_bound: bool = false
+			for existing_ev: InputEvent in InputMap.action_get_events(action):
+				if existing_ev is InputEventKey and existing_ev.physical_keycode == ev.physical_keycode:
+					already_bound = true
+					break
+			if not already_bound:
 				InputMap.action_add_event(action, ev)

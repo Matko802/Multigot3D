@@ -52,6 +52,11 @@ func _ready() -> void:
 	vsync_toggle.toggled.connect(_on_vsync_toggled)
 	if fullscreen_button:
 		fullscreen_button.pressed.connect(_on_fullscreen_pressed)
+		# Fullscreen toggle is not available on web — the browser controls this
+		if OS.has_feature("web"):
+			fullscreen_button.visible = false
+			if fullscreen_mode_label:
+				fullscreen_mode_label.text = "N/A (Browser)"
 	
 	# Gameplay
 	show_nametags_toggle.toggled.connect(_on_show_nametags_toggled)

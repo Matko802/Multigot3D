@@ -43,6 +43,9 @@ func _ready() -> void:
 	host_button.pressed.connect(_on_host_pressed)
 	if host_lan_button:
 		host_lan_button.pressed.connect(_on_host_lan_pressed)
+		# Hide LAN button on web — UDP is not available in browsers
+		if OS.has_feature("web"):
+			host_lan_button.visible = false
 	join_button.pressed.connect(_on_join_pressed)
 	disconnect_button.pressed.connect(_on_disconnect_pressed)
 	refresh_button.pressed.connect(_on_refresh_pressed)
@@ -112,8 +115,10 @@ func _process(_delta: float) -> void:
 func _toggle_pause() -> void:
 	if pause_menu.visible:
 		pause_menu.visible = false
-		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-		# Ensure the player controller recaptures the mouse
+		# On web, mouse capture requires a user gesture (click).
+		# The player controller's _input will re-capture on next click.
+		if not OS.has_feature("web"):
+			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 		get_tree().call_group("player_controllers", "capture_mouse")
 	else:
 		pause_menu.visible = true
@@ -132,8 +137,17 @@ func _on_settings_closed() -> void:
 
 func _on_resume_pressed() -> void:
 	pause_menu.visible = false
+	# On web, the Resume button click IS a user gesture, so capture should work.
+	# But we use call_deferred to ensure it happens after the click is fully processed.
+	if OS.has_feature("web"):
+		_capture_mouse_deferred.call_deferred()
+	else:
+		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+		get_tree().call_group("player_controllers", "capture_mouse")
+
+
+func _capture_mouse_deferred() -> void:
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-	# Ensure the player controller recaptures the mouse
 	get_tree().call_group("player_controllers", "capture_mouse")
 
 # ── UI State ────────────────────────────────────────────────────────────────

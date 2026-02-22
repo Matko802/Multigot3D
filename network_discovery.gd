@@ -7,19 +7,25 @@ const BROADCAST_PORT: int = 8910
 const BROADCAST_INTERVAL: float = 1.0
 
 var broadcast_timer: Timer
-var udp_peer: PacketPeerUDP
+var udp_peer: PacketPeerUDP = null
 var is_broadcasting: bool = false
 var is_listening: bool = false
 var server_info: Dictionary = {}
 
 func _ready() -> void:
+	# UDP is not available in web browsers — disable network discovery entirely
+	if OS.has_feature("web"):
+		set_process(false)
+		return
+
 	broadcast_timer = Timer.new()
 	broadcast_timer.wait_time = BROADCAST_INTERVAL
 	broadcast_timer.timeout.connect(_broadcast)
 	add_child(broadcast_timer)
 	
 	udp_peer = PacketPeerUDP.new()
-	udp_peer.set_broadcast_enabled(true)
+	if udp_peer:
+		udp_peer.set_broadcast_enabled(true)
 
 func _process(_delta: float) -> void:
 	if is_listening:
@@ -41,7 +47,7 @@ func _process(_delta: float) -> void:
 							server_found.emit(sender_ip, game_port, info)
 
 func start_broadcasting(server_name: String, game_port: int) -> void:
-	if is_broadcasting:
+	if OS.has_feature("web") or is_broadcasting:
 		return
 	
 	stop_listening() # Ensure we aren't listening
@@ -64,7 +70,7 @@ func stop_broadcasting() -> void:
 		print("[NetworkDiscovery] Stopped broadcasting")
 
 func start_listening() -> void:
-	if is_listening:
+	if OS.has_feature("web") or is_listening:
 		return
 		
 	stop_broadcasting()

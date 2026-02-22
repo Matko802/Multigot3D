@@ -119,7 +119,10 @@ func _setup_for_ownership() -> void:
 		if local_model:
 			local_model.position.z = 0.462
 
-		call_deferred("capture_mouse")
+		# On web, mouse capture requires a user gesture (click).
+		# We don't auto-capture; the player will click to capture.
+		if not OS.has_feature("web"):
+			call_deferred("capture_mouse")
 	else:
 		# Remote player — disable camera, show name label
 		if camera:
@@ -242,11 +245,16 @@ func _unhandled_input(event: InputEvent) -> void:
 
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+			# On web, this click IS a user gesture — capture will succeed
 			capture_mouse()
 
 	if event is InputEventKey:
 		if event.keycode == KEY_ESCAPE and event.pressed:
 			release_mouse()
+		# On web, allow any key press to re-capture mouse if not captured
+		# (key press counts as a user gesture in browsers)
+		elif OS.has_feature("web") and not mouse_captured and event.pressed:
+			capture_mouse()
 
 	if can_freefly and event.is_action_pressed(input_freefly):
 		freeflying = not freeflying
@@ -277,6 +285,8 @@ func _rotate_look(rot_input: Vector2) -> void:
 # ── Mouse ───────────────────────────────────────────────────────────────────
 
 func capture_mouse() -> void:
+	# On web, mouse capture only works during a user gesture (click/key press).
+	# We still call it here — the browser will grant it if this was triggered by a gesture.
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	mouse_captured = true
 

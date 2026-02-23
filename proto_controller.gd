@@ -36,6 +36,17 @@ extends CharacterBody3D
 		_update_name_label()
 
 @export var sync_anim_state: String = "idle"
+@export var sync_head_tilt: float = 0.0:
+	set(value):
+		sync_head_tilt = value
+		if is_node_ready() and head:
+			var basis := head.transform.basis
+			basis = Basis.IDENTITY
+			basis = basis.rotated(Vector3.RIGHT, value)
+			head.transform.basis = basis
+
+
+
 
 # ── Internal State ──────────────────────────────────────────────────────────
 
@@ -59,6 +70,9 @@ var footstep_sounds: Array[AudioStream] = []
 @onready var name_label_3d: Label3D = $NameLabel3D
 
 var anim_player: AnimationPlayer
+var playermodel: Node3D
+var skeleton: Skeleton3D
+var head_bone_idx: int = -1
 
 # Settings
 var sensitivity_modifier: float = 1.0
@@ -72,20 +86,37 @@ func _ready() -> void:
 	_load_settings()
 	_load_footstep_sounds()
 
-	# Expose the footstep RPC so remote clients can hear steps
-	GDSync.expose_func(_play_footstep_remote)
+	# Check if we're in singleplayer mode
+	var is_singleplayer_mode: bool = has_meta("singleplayer")
 
-	# Wait one frame so GDSync owner metadata propagates from the server
-	await get_tree().process_frame
+	# Only use GDSync features if NOT in singleplayer mode
+	if not is_singleplayer_mode:
+		# Expose the footstep RPC so remote clients can hear steps
+		GDSync.expose_func(_play_footstep_remote)
 
-	_is_local = GDSync.is_gdsync_owner(self)
+		# Wait one frame so GDSync owner metadata propagates from the server
+		await get_tree().process_frame
 
-	# Listen for ownership changes (e.g. if host migrates ownership)
-	GDSync.connect_gdsync_owner_changed(self, _on_owner_changed)
+		_is_local = GDSync.is_gdsync_owner(self)
+
+		# Listen for ownership changes (e.g. if host migrates ownership)
+		GDSync.connect_gdsync_owner_changed(self, _on_owner_changed)
+	else:
+		# In singleplayer mode, we are always the local player
+		_is_local = true
 
 	_setup_for_ownership()
 	_update_name_label()
 	_find_anim_player()
+	
+	var model := get_node_or_null("playermodel")
+	if model:
+		skeleton = _find_skeleton(model)
+		if skeleton:
+			head_bone_idx = _find_head_bone_index(skeleton)
+	
+	# Ensure we process after animations to override head bone
+	process_priority = 100
 	
 	# Apply loaded settings
 	apply_loaded_settings()
@@ -107,6 +138,8 @@ func apply_loaded_settings() -> void:
 
 
 func _setup_for_ownership() -> void:
+	var local_model := get_node_or_null("playermodel")
+
 	if _is_local:
 		# This is OUR player — enable camera, capture mouse, hide own name label
 		if camera:
@@ -114,21 +147,32 @@ func _setup_for_ownership() -> void:
 		if name_label_3d:
 			name_label_3d.visible = false
 
-		# Offset local model slightly so camera doesn't clip into it
-		var local_model := get_node_or_null("playermodel")
+		# Hide player model but keep shadows for local player
 		if local_model:
-			local_model.position.z = 0.462
+			_set_meshes_shadow_only(local_model, true)
 
-		# On web, mouse capture requires a user gesture (click).
-		# We don't auto-capture; the player will click to capture.
-		if not OS.has_feature("web"):
-			call_deferred("capture_mouse")
+		call_deferred("capture_mouse")
 	else:
 		# Remote player — disable camera, show name label
 		if camera:
 			camera.current = false
 		if name_label_3d:
 			name_label_3d.visible = true
+		
+		# Ensure model is fully visible for remote players
+		if local_model:
+			_set_meshes_shadow_only(local_model, false)
+
+
+func _set_meshes_shadow_only(node: Node, enable: bool) -> void:
+	if node is MeshInstance3D:
+		if enable:
+			node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
+		else:
+			node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+	
+	for child in node.get_children():
+		_set_meshes_shadow_only(child, enable)
 
 
 func _on_owner_changed(new_owner: int) -> void:
@@ -137,6 +181,9 @@ func _on_owner_changed(new_owner: int) -> void:
 
 
 # ── Animation ───────────────────────────────────────────────────────────────
+
+
+
 
 func _find_anim_player() -> void:
 	var model := get_node_or_null("playermodel")
@@ -156,6 +203,42 @@ func _search_animation_player(node: Node) -> AnimationPlayer:
 		if result:
 			return result
 	return null
+
+func _find_skeleton(node: Node) -> Skeleton3D:
+	if node is Skeleton3D:
+		return node
+	for child in node.get_children():
+		var result := _find_skeleton(child)
+		if result:
+			return result
+	return null
+
+func _find_head_bone_index(skel: Skeleton3D) -> int:
+	# Try exact names
+	var names = ["Head", "head", "Neck", "neck"]
+	for n in names:
+		var idx = skel.find_bone(n)
+		if idx != -1: return idx
+	
+	# Try fuzzy match
+	for i in skel.get_bone_count():
+		var b_name = skel.get_bone_name(i)
+		if "Head" in b_name or "head" in b_name:
+			return i
+	return -1
+
+func _update_head_bone() -> void:
+	if not skeleton or head_bone_idx == -1:
+		return
+	
+	# Get the pose set by animation
+	var current_rot = skeleton.get_bone_pose_rotation(head_bone_idx)
+	
+	# Apply tilt (pitch around X axis)
+	var tilt = Quaternion(Vector3.RIGHT, sync_head_tilt)
+	
+	# Apply rotation
+	skeleton.set_bone_pose_rotation(head_bone_idx, current_rot * tilt)
 
 
 func _update_anim_state() -> void:
@@ -179,6 +262,9 @@ func _apply_animation() -> void:
 			anim_player.stop()
 
 
+
+
+
 # ── Process ─────────────────────────────────────────────────────────────────
 
 func _process(delta: float) -> void:
@@ -186,6 +272,10 @@ func _process(delta: float) -> void:
 		_update_anim_state()
 		_process_footsteps(delta)
 	_apply_animation()
+	_update_head_bone()
+
+
+
 
 
 func _physics_process(delta: float) -> void:
@@ -245,16 +335,11 @@ func _unhandled_input(event: InputEvent) -> void:
 
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-			# On web, this click IS a user gesture — capture will succeed
 			capture_mouse()
 
 	if event is InputEventKey:
 		if event.keycode == KEY_ESCAPE and event.pressed:
 			release_mouse()
-		# On web, allow any key press to re-capture mouse if not captured
-		# (key press counts as a user gesture in browsers)
-		elif OS.has_feature("web") and not mouse_captured and event.pressed:
-			capture_mouse()
 
 	if can_freefly and event.is_action_pressed(input_freefly):
 		freeflying = not freeflying
@@ -280,13 +365,14 @@ func _rotate_look(rot_input: Vector2) -> void:
 
 	head.transform.basis = Basis()
 	head.rotate_x(look_rotation.x)
+	
+	# Sync head tilt across network
+	sync_head_tilt = look_rotation.x
 
 
 # ── Mouse ───────────────────────────────────────────────────────────────────
 
 func capture_mouse() -> void:
-	# On web, mouse capture only works during a user gesture (click/key press).
-	# We still call it here — the browser will grant it if this was triggered by a gesture.
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	mouse_captured = true
 
@@ -320,7 +406,9 @@ func _process_footsteps(delta: float) -> void:
 			footstep_timer = interval
 			# Play locally and send to remotes
 			_play_footstep_local()
-			GDSync.call_func(_play_footstep_remote)
+			# Only send remote footstep in multiplayer mode
+			if GDSync.is_active():
+				GDSync.call_func(_play_footstep_remote)
 	else:
 		footstep_timer = 0.05
 

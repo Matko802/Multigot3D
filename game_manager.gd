@@ -21,6 +21,9 @@ var _local_player_spawned: bool = false
 var _is_host: bool = false
 var _host_client_id: int = -1
 
+# Singleplayer mode
+var _is_singleplayer: bool = false
+
 signal connection_status_changed(status: String)
 
 func _ready() -> void:
@@ -45,11 +48,6 @@ func _ready() -> void:
 # ── Public API ──────────────────────────────────────────────────────────────
 
 func host_game(lobby_name: String, player_name: String, local: bool = false) -> void:
-	# LAN/local multiplayer is not available on web (no UDP support)
-	if local and OS.has_feature("web"):
-		connection_status_changed.emit("LAN mode is not available in web browsers.")
-		return
-
 	_local_username = player_name
 	_pending_lobby_name = lobby_name
 	_pending_action = "host"
@@ -71,11 +69,6 @@ func host_game(lobby_name: String, player_name: String, local: bool = false) -> 
 
 
 func join_game(lobby_name: String, player_name: String, local: bool = false) -> void:
-	# LAN/local multiplayer is not available on web (no UDP support)
-	if local and OS.has_feature("web"):
-		connection_status_changed.emit("LAN mode is not available in web browsers.")
-		return
-
 	_local_username = player_name
 	_pending_lobby_name = lobby_name
 	_pending_action = "join"
@@ -96,7 +89,30 @@ func join_game(lobby_name: String, player_name: String, local: bool = false) -> 
 			GDSync.start_multiplayer()
 
 
+func start_singleplayer(player_name: String) -> void:
+	_local_username = player_name
+	_is_singleplayer = true
+	_local_player_spawned = false
+
+	# Stop any active multiplayer connection so it doesn't interfere
+	if GDSync.is_active():
+		GDSync.stop_multiplayer()
+
+	_cleanup_players()
+	_spawn_singleplayer()
+	connection_status_changed.emit("Singleplayer")
+
+
 func disconnect_game() -> void:
+	if _is_singleplayer:
+		_is_singleplayer = false
+		_cleanup_players()
+		_local_player_spawned = false
+		connection_status_changed.emit("Disconnected")
+		# Re-establish background connection for lobby browsing
+		GDSync.start_multiplayer()
+		return
+
 	# Leave lobby first so server knows, then stop multiplayer
 	if GDSync.is_active() and is_in_lobby():
 		GDSync.lobby_leave()
@@ -121,7 +137,7 @@ func is_in_lobby() -> bool:
 
 
 func is_in_game() -> bool:
-	return is_in_lobby()
+	return _is_singleplayer or is_in_lobby()
 
 
 # ── Internal ────────────────────────────────────────────────────────────────
@@ -141,6 +157,26 @@ func _process_pending_action() -> void:
 		GDSync.lobby_join(_pending_lobby_name)
 
 	_pending_action = ""
+
+
+func _spawn_singleplayer() -> void:
+	if _local_player_spawned:
+		return
+
+	_local_player_spawned = true
+
+	var player_scene: PackedScene = load(PLAYER_SCENE_PATH)
+	var player: ProtoController = player_scene.instantiate() as ProtoController
+	players_container.add_child(player)
+
+	# Mark as singleplayer so the controller knows to skip GDSync ownership checks
+	player.set_meta("singleplayer", true)
+
+	# Set initial position
+	player.position = Vector3(0.0, 5.0, 0.0)
+	player.player_name = _local_username
+
+	print("[GameManager] Spawned singleplayer player: ", player.name)
 
 
 func _spawn_local_player() -> void:

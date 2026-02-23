@@ -22,10 +22,15 @@ extends CanvasLayer
 
 @onready var settings_button: Button = %SettingsButton
 @onready var pause_menu: Control = %PauseMenu
+@onready var pause_container: Control = $PauseMenu/PauseContainer
+@onready var pause_panel: PanelContainer = $PauseMenu/PauseContainer/PanelContainer
 @onready var resume_button: Button = %ResumeButton
 @onready var pause_settings_button: Button = %PauseSettingsButton
 @onready var quit_button: Button = %QuitButton
 @onready var settings_menu: Control = $SettingsMenu
+
+@onready var singleplayer_button: Button = $MainMenu/VBoxContainer/SingleplayerButton
+@onready var web_warning: Label = $WebWarning
 
 var game_manager: GameManager
 var _pending_refresh: bool = false
@@ -37,25 +42,35 @@ const SETTINGS_FILE_PATH: String = "user://settings.cfg"
 const SETTINGS_SECTION: String = "player"
 const SETTING_NAME_KEY: String = "name"
 
+# DPI Scaling
+var _base_dpi: float = 96.0
+var _screen_dpi: float = 96.0
+
 func _ready() -> void:
 	game_manager = get_node("../GameManager") as GameManager
+	
+	# Initialize DPI scaling
+	_calculate_screen_dpi()
+	_apply_dpi_scaling_to_pause_menu()
 
 	host_button.pressed.connect(_on_host_pressed)
 	if host_lan_button:
 		host_lan_button.pressed.connect(_on_host_lan_pressed)
-		# Hide LAN button on web — UDP is not available in browsers
-		if OS.has_feature("web"):
-			host_lan_button.visible = false
 	join_button.pressed.connect(_on_join_pressed)
 	disconnect_button.pressed.connect(_on_disconnect_pressed)
 	refresh_button.pressed.connect(_on_refresh_pressed)
 	lobby_list.item_activated.connect(_on_lobby_activated)
+	
+	singleplayer_button.pressed.connect(_on_singleplayer_pressed)
 	
 	settings_button.pressed.connect(_on_settings_pressed)
 	resume_button.pressed.connect(_on_resume_pressed)
 	pause_settings_button.pressed.connect(_on_settings_pressed)
 	quit_button.pressed.connect(_on_disconnect_pressed)
 	settings_menu.close_requested.connect(_on_settings_closed)
+	
+	# Connect to window resizing to recalculate DPI on orientation/resolution changes
+	get_window().size_changed.connect(_on_window_resized)
 
 	game_manager.connection_status_changed.connect(_on_connection_status_changed)
 	GDSync.lobbies_received.connect(_on_lobbies_received)
@@ -73,11 +88,26 @@ func _ready() -> void:
 
 	show_menu()
 	
+	# Show web warning if running in a browser
+	if OS.has_feature("web"):
+		web_warning.visible = true
+		# Disable multiplayer buttons on web since they won't work
+		host_button.disabled = true
+		host_button.tooltip_text = "Not available in web builds"
+		if host_lan_button:
+			host_lan_button.disabled = true
+			host_lan_button.tooltip_text = "Not available in web builds"
+		join_button.disabled = true
+		join_button.tooltip_text = "Not available in web builds"
+		refresh_button.disabled = true
+		refresh_button.tooltip_text = "Not available in web builds"
+	
 	# Load saved name or default
 	_load_settings()
 
-	# Auto-connect on startup so lobby list is ready immediately
-	_start_auto_connect()
+	# Auto-connect on startup so lobby list is ready immediately (skip on web)
+	if not OS.has_feature("web"):
+		_start_auto_connect()
 
 
 func _process(_delta: float) -> void:
@@ -115,10 +145,7 @@ func _process(_delta: float) -> void:
 func _toggle_pause() -> void:
 	if pause_menu.visible:
 		pause_menu.visible = false
-		# On web, mouse capture requires a user gesture (click).
-		# The player controller's _input will re-capture on next click.
-		if not OS.has_feature("web"):
-			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 		get_tree().call_group("player_controllers", "capture_mouse")
 	else:
 		pause_menu.visible = true
@@ -137,16 +164,6 @@ func _on_settings_closed() -> void:
 
 func _on_resume_pressed() -> void:
 	pause_menu.visible = false
-	# On web, the Resume button click IS a user gesture, so capture should work.
-	# But we use call_deferred to ensure it happens after the click is fully processed.
-	if OS.has_feature("web"):
-		_capture_mouse_deferred.call_deferred()
-	else:
-		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-		get_tree().call_group("player_controllers", "capture_mouse")
-
-
-func _capture_mouse_deferred() -> void:
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	get_tree().call_group("player_controllers", "capture_mouse")
 
@@ -158,6 +175,9 @@ func show_menu() -> void:
 	reticle.visible = false
 	pause_menu.visible = false
 	settings_menu.visible = false
+	# Show web warning only on main menu
+	if web_warning and OS.has_feature("web"):
+		web_warning.visible = true
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	# Resume auto-refresh when back on the menu
 	if _auto_refresh_timer and GDSync.is_active() and GDSync.get_client_id() >= 0:
@@ -166,11 +186,16 @@ func show_menu() -> void:
 
 
 func show_game() -> void:
+	# Ensure menu is completely hidden
 	main_menu.visible = false
-	game_hud.visible = true
-	reticle.visible = false
 	pause_menu.visible = false
 	settings_menu.visible = false
+	# Show game HUD and reticle
+	game_hud.visible = true
+	reticle.visible = false
+	# Hide web warning when in-game
+	if web_warning:
+		web_warning.visible = false
 	# Stop auto-refresh while in-game
 	if _auto_refresh_timer:
 		_auto_refresh_timer.stop()
@@ -178,10 +203,21 @@ func show_game() -> void:
 	if name_label:
 		name_label.text = "Name: " + name_input.text
 	_update_player_list()
+	# Force mouse mode for gameplay
+	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	get_tree().call_group("player_controllers", "capture_mouse")
 
 
 
 # ── Button Callbacks ────────────────────────────────────────────────────────
+
+func _on_singleplayer_pressed() -> void:
+	_save_settings()
+	var player_name: String = name_input.text.strip_edges()
+	if player_name == "":
+		player_name = "Player" + str(randi() % 1000)
+	game_manager.start_singleplayer(player_name)
+
 
 func _on_host_pressed() -> void:
 	_save_settings()
@@ -295,7 +331,7 @@ func _on_lobby_activated(index: int) -> void:
 
 func _on_connection_status_changed(status: String) -> void:
 	status_label.text = status
-	if "Playing" in status:
+	if "Playing" in status or "Singleplayer" in status:
 		show_game()
 	elif "Disconnected" in status or "failed" in status.to_lower() or "Kicked" in status:
 		show_menu()
@@ -345,3 +381,57 @@ func _update_player_list() -> void:
 		if username == "":
 			username = "Player " + str(client_id)
 		player_list_display.add_item(username)
+
+
+# ── DPI Scaling ─────────────────────────────────────────────────────────────
+
+func _calculate_screen_dpi() -> void:
+	"""Calculate screen DPI based on screen size and resolution."""
+	# Use viewport-based DPI estimation since DisplayServer.screen_get_physical_size() is not available
+	_screen_dpi = _estimate_dpi_from_viewport()
+	print("[GameUI] Screen DPI: %.1f" % _screen_dpi)
+
+
+func _estimate_dpi_from_viewport() -> float:
+	"""Estimate DPI based on viewport size if physical screen info unavailable."""
+	var viewport_size: Vector2i = get_viewport().get_visible_rect().size
+	# Assume typical monitor 16:9 aspect ratio at 24 inches diagonal
+	var estimated_diagonal_px: float = sqrt(
+		pow(viewport_size.x, 2) + pow(viewport_size.y, 2)
+	)
+	# Standard 24" 1080p = ~92 DPI
+	if estimated_diagonal_px > 2500:
+		return 110.0  # High DPI (4K or high-res display)
+	elif estimated_diagonal_px > 1920:
+		return 96.0   # Standard DPI
+	else:
+		return 72.0   # Lower DPI (smaller screens)
+
+
+func _apply_dpi_scaling_to_pause_menu() -> void:
+	"""Apply DPI-aware sizing to the pause menu."""
+	if not pause_panel:
+		return
+	
+	var dpi_scale: float = _screen_dpi / _base_dpi
+	
+	# Base size adjusted by DPI scale
+	var base_width: float = 500.0
+	var base_height: float = 350.0
+	
+	var scaled_width: float = base_width * dpi_scale
+	var scaled_height: float = base_height * dpi_scale
+	
+	# Clamp to reasonable bounds
+	scaled_width = clampf(scaled_width, 400.0, 800.0)
+	scaled_height = clampf(scaled_height, 300.0, 600.0)
+	
+	pause_panel.custom_minimum_size = Vector2(scaled_width, scaled_height)
+	
+	print("[GameUI] Pause Menu Scaled to: %.0fx%.0f (DPI Scale: %.2f)" % [scaled_width, scaled_height, dpi_scale])
+
+
+func _on_window_resized() -> void:
+	"""Handle window resize events to recalculate DPI if needed."""
+	_calculate_screen_dpi()
+	_apply_dpi_scaling_to_pause_menu()

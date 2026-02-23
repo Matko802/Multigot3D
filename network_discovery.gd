@@ -13,11 +13,6 @@ var is_listening: bool = false
 var server_info: Dictionary = {}
 
 func _ready() -> void:
-	# UDP is not available in web browsers — disable network discovery entirely
-	if OS.has_feature("web"):
-		set_process(false)
-		return
-
 	broadcast_timer = Timer.new()
 	broadcast_timer.wait_time = BROADCAST_INTERVAL
 	broadcast_timer.timeout.connect(_broadcast)
@@ -47,7 +42,7 @@ func _process(_delta: float) -> void:
 							server_found.emit(sender_ip, game_port, info)
 
 func start_broadcasting(server_name: String, game_port: int) -> void:
-	if OS.has_feature("web") or is_broadcasting:
+	if is_broadcasting:
 		return
 	
 	stop_listening() # Ensure we aren't listening
@@ -70,7 +65,7 @@ func stop_broadcasting() -> void:
 		print("[NetworkDiscovery] Stopped broadcasting")
 
 func start_listening() -> void:
-	if OS.has_feature("web") or is_listening:
+	if is_listening:
 		return
 		
 	stop_broadcasting()

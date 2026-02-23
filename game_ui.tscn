@@ -33,93 +33,52 @@ anchor_bottom = 0.5
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Title" type="Label" parent="MainMenu/VBoxContainer" unique_id=1785459509]
+[node name="Title" type="Label" parent="MainMenu/VBoxContainer" unique_id=496576689]
 layout_mode = 2
 text = "Multiplayer Game"
 
-[node name="HostButton" type="Button" parent="MainMenu/VBoxContainer" unique_id=1513311322]
+[node name="SingleplayerButton" type="Button" parent="MainMenu/VBoxContainer" unique_id=997589260]
+layout_mode = 2
+text = "Singleplayer"
+
+[node name="HostButton" type="Button" parent="MainMenu/VBoxContainer" unique_id=456673693]
 layout_mode = 2
 text = "Host Online"
 
-[node name="HostLANButton" type="Button" parent="MainMenu/VBoxContainer" unique_id=95860286]
+[node name="HostLANButton" type="Button" parent="MainMenu/VBoxContainer" unique_id=1860163996]
 layout_mode = 2
 text = "Host LAN"
 
-[node name="IPInput" type="LineEdit" parent="MainMenu/VBoxContainer" unique_id=789268861]
+[node name="IPInput" type="LineEdit" parent="MainMenu/VBoxContainer" unique_id=689837775]
 layout_mode = 2
 placeholder_text = "Lobby Name"
 
-[node name="StatusLabel" type="Label" parent="MainMenu/VBoxContainer" unique_id=762194513]
+[node name="StatusLabel" type="Label" parent="MainMenu/VBoxContainer" unique_id=1125219344]
 layout_mode = 2
 
-[node name="NameInput" type="LineEdit" parent="MainMenu/VBoxContainer" unique_id=1834577862]
+[node name="NameInput" type="LineEdit" parent="MainMenu/VBoxContainer" unique_id=1256711025]
 layout_mode = 2
 placeholder_text = "Enter Player Name"
 
-[node name="LobbyList" type="ItemList" parent="MainMenu/VBoxContainer" unique_id=2072426427]
+[node name="LobbyList" type="ItemList" parent="MainMenu/VBoxContainer" unique_id=9811485]
 custom_minimum_size = Vector2(0, 300)
 layout_mode = 2
 
-[node name="LobbyControl" type="HBoxContainer" parent="MainMenu/VBoxContainer" unique_id=1862788299]
+[node name="LobbyControl" type="HBoxContainer" parent="MainMenu/VBoxContainer" unique_id=746513071]
 layout_mode = 2
 
-[node name="RefreshButton" type="Button" parent="MainMenu/VBoxContainer/LobbyControl" unique_id=1731720285]
+[node name="RefreshButton" type="Button" parent="MainMenu/VBoxContainer/LobbyControl" unique_id=1891507755]
 layout_mode = 2
 text = "Refresh Lobbies"
 
-[node name="JoinSelectedButton" type="Button" parent="MainMenu/VBoxContainer/LobbyControl" unique_id=401765148]
+[node name="JoinSelectedButton" type="Button" parent="MainMenu/VBoxContainer/LobbyControl" unique_id=855642296]
 layout_mode = 2
 text = "Join Selected"
 
-[node name="SettingsButton" type="Button" parent="MainMenu/VBoxContainer" unique_id=1328350926]
+[node name="SettingsButton" type="Button" parent="MainMenu/VBoxContainer" unique_id=1624559803]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Settings"
-
-[node name="GameHUD" type="Control" parent="." unique_id=593503832]
-layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-
-[node name="VBoxContainer" type="VBoxContainer" parent="GameHUD" unique_id=1888099419]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -47.0
-offset_top = -42.5
-offset_right = 47.0
-offset_bottom = 42.5
-grow_horizontal = 2
-grow_vertical = 0
-
-[node name="PlayerCountLabel" type="Label" parent="GameHUD/VBoxContainer" unique_id=1626134492]
-layout_mode = 2
-
-[node name="DisconnectButton" type="Button" parent="GameHUD/VBoxContainer" unique_id=890305566]
-layout_mode = 2
-text = "Disconnect"
-
-[node name="NameLabel" type="Label" parent="GameHUD/VBoxContainer" unique_id=1292652509]
-layout_mode = 2
-text = "Name:"
-
-[node name="PlayerList" type="ItemList" parent="GameHUD/VBoxContainer" unique_id=906393166]
-custom_minimum_size = Vector2(0, 150)
-layout_mode = 2
-
-[node name="Background" type="ColorRect" parent="GameHUD" unique_id=919398973]
-layout_mode = 0
-anchor_right = 1.0
-anchor_bottom = 1.0
-mouse_filter = 2
-color = Color(0, 0, 0, 0.3)
 
 [node name="Reticle" type="Control" parent="." unique_id=478643172]
 layout_mode = 3
@@ -156,38 +115,94 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Background" type="ColorRect" parent="PauseMenu" unique_id=446839001]
-layout_mode = 0
+[node name="DimBackground" type="ColorRect" parent="PauseMenu" unique_id=446839001]
+layout_mode = 1
+anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 color = Color(0.16078432, 0.17254902, 0.1882353, 0.39215687)
 
-[node name="VBoxContainer" type="VBoxContainer" parent="PauseMenu" unique_id=1020419560]
-layout_mode = 0
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
+[node name="PauseContainer" type="CenterContainer" parent="PauseMenu" unique_id=1020419560]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
-[node name="Label" type="Label" parent="PauseMenu/VBoxContainer" unique_id=205354925]
+[node name="PanelContainer" type="PanelContainer" parent="PauseMenu/PauseContainer" unique_id=559832105]
+custom_minimum_size = Vector2(500, 350)
 layout_mode = 2
-text = "Paused"
+
+[node name="VBoxContainer" type="VBoxContainer" parent="PauseMenu/PauseContainer/PanelContainer" unique_id=1340540219]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="Label" type="Label" parent="PauseMenu/PauseContainer/PanelContainer/VBoxContainer" unique_id=205354925]
+layout_mode = 2
+theme_override_font_sizes/font_size = 48
+text = "PAUSED"
 horizontal_alignment = 1
 
-[node name="ResumeButton" type="Button" parent="PauseMenu/VBoxContainer" unique_id=823888638]
-unique_name_in_owner = true
+[node name="Separator" type="HSeparator" parent="PauseMenu/PauseContainer/PanelContainer/VBoxContainer" unique_id=733203405]
 layout_mode = 2
-text = "Resume"
+theme_override_constants/separation = 10
 
-[node name="PauseSettingsButton" type="Button" parent="PauseMenu/VBoxContainer" unique_id=952188286]
-unique_name_in_owner = true
+[node name="ButtonContainer" type="VBoxContainer" parent="PauseMenu/PauseContainer/PanelContainer/VBoxContainer" unique_id=1847362810]
 layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ResumeButton" type="Button" parent="PauseMenu/PauseContainer/PanelContainer/VBoxContainer/ButtonContainer" unique_id=823888638]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 50)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Resume Game"
+
+[node name="PauseSettingsButton" type="Button" parent="PauseMenu/PauseContainer/PanelContainer/VBoxContainer/ButtonContainer" unique_id=952188286]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 50)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
 text = "Settings"
 
-[node name="QuitButton" type="Button" parent="PauseMenu/VBoxContainer" unique_id=1659152026]
+[node name="QuitButton" type="Button" parent="PauseMenu/PauseContainer/PanelContainer/VBoxContainer/ButtonContainer" unique_id=1659152026]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 50)
 layout_mode = 2
+theme_override_font_sizes/font_size = 24
 text = "Disconnect"
 
 [node name="SettingsMenu" parent="." unique_id=566610093 instance=ExtResource("2_mj8uy")]
 unique_name_in_owner = true
+
+[node name="WebWarning" type="Label" parent="." unique_id=634965473]
+unique_name_in_owner = true
+visible = false
+modulate = Color(1, 0.85, 0.2, 1)
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 610.0
+offset_bottom = 30.0
+text = "⚠ Web build: Multiplayer features are not supported. Use Singleplayer mode."
+
+[node name="GameHUD" type="Control" parent="." unique_id=654300937]
+layout_mode = 3
+anchors_preset = 0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="GameHUD" unique_id=1638931501]
+layout_mode = 0
+
+[node name="PlayerCountLabel" type="Label" parent="GameHUD/VBoxContainer" unique_id=1880610006]
+layout_mode = 2
+
+[node name="DisconnectButton" type="Button" parent="GameHUD/VBoxContainer" unique_id=1417536419]
+layout_mode = 2
+
+[node name="NameLabel" type="Label" parent="GameHUD/VBoxContainer" unique_id=1084603678]
+layout_mode = 2
+
+[node name="PlayerList" type="ItemList" parent="GameHUD/VBoxContainer" unique_id=889424765]
+layout_mode = 2

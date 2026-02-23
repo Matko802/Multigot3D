@@ -4,7 +4,7 @@
 // Incrementing CACHE_VERSION will kick off the install event and force
 // previously cached resources to be updated from the network.
 /** @type {string} */
-const CACHE_VERSION = '1771872241|1037478571';
+const CACHE_VERSION = '1771877507|1016978229';
 /** @type {string} */
 const CACHE_PREFIX = 'Multigot3D-sw-cache-';
 const CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;

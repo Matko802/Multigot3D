@@ -18,8 +18,6 @@ const SETTINGS_SECTION: String = "settings"
 # Audio
 @onready var master_volume_slider: HSlider = %MasterVolumeSlider
 @onready var master_volume_value: Label = %MasterVolumeValue
-@onready var effects_volume_slider: HSlider = %EffectsVolumeSlider
-@onready var effects_volume_value: Label = %EffectsVolumeValue
 @onready var mute_toggle: CheckButton = %MuteToggle
 
 # Graphics
@@ -45,7 +43,6 @@ func _ready() -> void:
 	
 	# Audio
 	master_volume_slider.value_changed.connect(_on_master_volume_changed)
-	effects_volume_slider.value_changed.connect(_on_effects_volume_changed)
 	mute_toggle.toggled.connect(_on_mute_toggled)
 	
 	# Graphics
@@ -85,9 +82,6 @@ func _on_reset_pressed() -> void:
 	master_volume_slider.value = 1.0
 	_on_master_volume_changed(1.0)
 	
-	effects_volume_slider.value = 1.0
-	_on_effects_volume_changed(1.0)
-	
 	mute_toggle.button_pressed = false
 	_on_mute_toggled(false)
 	
@@ -124,15 +118,6 @@ func _on_master_volume_changed(value: float) -> void:
 		AudioServer.set_bus_mute(bus_idx, true)
 	elif not mute_toggle.button_pressed:
 		AudioServer.set_bus_mute(bus_idx, false)
-
-func _on_effects_volume_changed(value: float) -> void:
-	effects_volume_value.text = "%d%%" % int(value * 100)
-	var bus_idx = AudioServer.get_bus_index("SFX") # Assuming SFX bus exists, fallback to nothing if not
-	if bus_idx == -1:
-		bus_idx = AudioServer.get_bus_index("Effects")
-	
-	if bus_idx != -1:
-		AudioServer.set_bus_volume_db(bus_idx, linear_to_db(value))
 
 func _on_mute_toggled(toggled: bool) -> void:
 	var bus_idx = AudioServer.get_bus_index("Master")
@@ -201,7 +186,6 @@ func _save_settings() -> void:
 	config.set_value(SETTINGS_SECTION, "invert_y", invert_y_toggle.button_pressed)
 	
 	config.set_value(SETTINGS_SECTION, "master_volume", master_volume_slider.value)
-	config.set_value(SETTINGS_SECTION, "effects_volume", effects_volume_slider.value)
 	config.set_value(SETTINGS_SECTION, "mute", mute_toggle.button_pressed)
 	
 	config.set_value(SETTINGS_SECTION, "vsync", vsync_toggle.button_pressed)
@@ -227,7 +211,6 @@ func _load_settings() -> void:
 		if invert_y_toggle: invert_y_toggle.button_pressed = config.get_value(SETTINGS_SECTION, "invert_y", false)
 		
 		if master_volume_slider: master_volume_slider.value = config.get_value(SETTINGS_SECTION, "master_volume", 1.0)
-		if effects_volume_slider: effects_volume_slider.value = config.get_value(SETTINGS_SECTION, "effects_volume", 1.0)
 		if mute_toggle: mute_toggle.button_pressed = config.get_value(SETTINGS_SECTION, "mute", false)
 		
 		if vsync_toggle: vsync_toggle.button_pressed = config.get_value(SETTINGS_SECTION, "vsync", true)
@@ -243,7 +226,6 @@ func _load_settings() -> void:
 		if fov_slider: _on_fov_changed(fov_slider.value)
 		if invert_y_toggle: _on_invert_y_toggled(invert_y_toggle.button_pressed)
 		if master_volume_slider: _on_master_volume_changed(master_volume_slider.value)
-		if effects_volume_slider: _on_effects_volume_changed(effects_volume_slider.value)
 		if mute_toggle: _on_mute_toggled(mute_toggle.button_pressed)
 		if vsync_toggle: _on_vsync_toggled(vsync_toggle.button_pressed)
 		if show_nametags_toggle: _on_show_nametags_toggled(show_nametags_toggle.button_pressed)

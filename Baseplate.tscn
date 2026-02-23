@@ -1,0 +1,43 @@
+[gd_scene format=3 uid="uid://dkvmf0kj8r6jy"]
+
+[ext_resource type="Material" uid="uid://cx5ekm3v4ocwu" path="res://Grass.tres" id="1_l836b"]
+[ext_resource type="Script" uid="uid://diqak6i6h5f6" path="res://game_manager.gd" id="2_x7hid"]
+[ext_resource type="PackedScene" uid="uid://do14kgbmsmo44" path="res://game_ui.tscn" id="3_cj0fy"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_l836b"]
+sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
+ground_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
+
+[sub_resource type="Sky" id="Sky_ig7tw"]
+sky_material = SubResource("ProceduralSkyMaterial_l836b")
+
+[sub_resource type="Environment" id="Environment_s4wiy"]
+background_mode = 2
+sky = SubResource("Sky_ig7tw")
+tonemap_mode = 2
+glow_enabled = true
+
+[node name="Node3D" type="Node3D" unique_id=434324720]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1004243973 groups=["world_environment"]]
+environment = SubResource("Environment_s4wiy")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=61945012]
+transform = Transform3D(-0.8660253, -0.4330129, 0.2500001, 0.4330128, -0.39951885, 0.8080128, -0.2500002, 0.8080127, 0.5334936, 0, 19.8, 0)
+shadow_enabled = true
+
+[node name="CSGCombiner3D" type="CSGCombiner3D" parent="." unique_id=2049034578]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+use_collision = true
+
+[node name="CSGBox3D" type="CSGBox3D" parent="CSGCombiner3D" unique_id=580757238]
+use_collision = true
+size = Vector3(490.43848, 8, 487.11188)
+material = ExtResource("1_l836b")
+
+[node name="GameManager" type="Node" parent="." unique_id=162655618]
+script = ExtResource("2_x7hid")
+
+[node name="GameUI" parent="." unique_id=1356119558 instance=ExtResource("3_cj0fy")]
+
+[node name="Players" type="Node3D" parent="." unique_id=1887440019]

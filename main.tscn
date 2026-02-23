@@ -12,12 +12,12 @@
 sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
 ground_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
 
-[sub_resource type="Sky" id="Sky_ig7tw"]
+[sub_resource type="Sky" id="Sky_272bh"]
 sky_material = SubResource("ProceduralSkyMaterial_7dm0k")
 
 [sub_resource type="Environment" id="Environment_0xm2m"]
 background_mode = 2
-sky = SubResource("Sky_ig7tw")
+sky = SubResource("Sky_272bh")
 tonemap_mode = 2
 glow_enabled = true
 
@@ -294,11 +294,6 @@ transform = Transform3D(9.8, 0, 0, 0, 2.2770002, 0, 0, 0, 9.8, 20, -3.2997499, 6
 material_override = ExtResource("4_lquwl")
 transparency = 0.5
 mesh = SubResource("CylinderMesh_lquwl")
-
-[node name="AudioStreamPlayer3D" type="AudioStreamPlayer3D" parent="." unique_id=1197206100]
-
-[node name="AudioStreamPlayer3D2" type="AudioStreamPlayer3D" parent="." unique_id=471998788]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 44, 0, 0)
 
 [node name="GameManager" type="Node" parent="." unique_id=1113130871]
 script = ExtResource("5_7mycd")

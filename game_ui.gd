@@ -7,18 +7,19 @@ extends CanvasLayer
 @onready var game_hud: Control = $GameHUD
 @onready var reticle: Control = $Reticle
 
-@onready var host_button: Button = $MainMenu/VBoxContainer/HostButton
-@onready var host_lan_button: Button = $MainMenu/VBoxContainer/HostLANButton
-@onready var join_button: Button = $MainMenu/VBoxContainer/LobbyControl/JoinSelectedButton
-@onready var ip_input: LineEdit = $MainMenu/VBoxContainer/IPInput
-@onready var name_input: LineEdit = $MainMenu/VBoxContainer/NameInput
+@onready var host_button: Button = $MainMenu/PlayMenu/CenterContainer/PlayPanel/Content/TabContainer/Multiplayer/HostButton
+@onready var host_lan_button: Button = $MainMenu/PlayMenu/CenterContainer/PlayPanel/Content/TabContainer/Multiplayer/HostLANButton
+@onready var join_button: Button = $MainMenu/PlayMenu/CenterContainer/PlayPanel/Content/TabContainer/Multiplayer/LobbyControl/JoinSelectedButton
+@onready var ip_input: LineEdit = $MainMenu/PlayMenu/CenterContainer/PlayPanel/Content/TabContainer/Multiplayer/IPInput
+@onready var name_input: LineEdit = $MainMenu/PlayMenu/CenterContainer/PlayPanel/Content/NameInput
 @onready var player_count_label: Label = $GameHUD/VBoxContainer/PlayerCountLabel
 @onready var disconnect_button: Button = $GameHUD/VBoxContainer/DisconnectButton
 @onready var name_label: Label = $GameHUD/VBoxContainer/NameLabel
-@onready var player_list_display: ItemList = $GameHUD/VBoxContainer/PlayerList
-@onready var status_label: Label = $MainMenu/VBoxContainer/StatusLabel
-@onready var lobby_list: ItemList = $MainMenu/VBoxContainer/LobbyList
-@onready var refresh_button: Button = $MainMenu/VBoxContainer/LobbyControl/RefreshButton
+@onready var status_label: Label = $MainMenu/PlayMenu/CenterContainer/PlayPanel/Content/TabContainer/Multiplayer/StatusLabel
+@onready var lobby_list: ItemList = $MainMenu/PlayMenu/CenterContainer/PlayPanel/Content/TabContainer/Multiplayer/LobbyList
+@onready var refresh_button: Button = $MainMenu/PlayMenu/CenterContainer/PlayPanel/Content/TabContainer/Multiplayer/LobbyControl/RefreshButton
+
+@onready var player_list: Control = $PlayerList
 
 @onready var settings_button: Button = %SettingsButton
 @onready var pause_menu: Control = %PauseMenu
@@ -29,13 +30,24 @@ extends CanvasLayer
 @onready var quit_button: Button = %QuitButton
 @onready var settings_menu: Control = $SettingsMenu
 
-@onready var singleplayer_button: Button = $MainMenu/VBoxContainer/SingleplayerButton
+@onready var singleplayer_button: Button = $MainMenu/PlayMenu/CenterContainer/PlayPanel/Content/TabContainer/Singleplayer/SingleplayerButton
+
+@onready var start_screen: Control = $MainMenu/StartScreen
+@onready var play_menu: Control = $MainMenu/PlayMenu
+@onready var play_button: Button = $MainMenu/StartScreen/PlayButton
+@onready var desktop_quit_button: Button = $MainMenu/StartScreen/DesktopQuitButton
+@onready var back_button: Button = $MainMenu/PlayMenu/CenterContainer/PlayPanel/Content/BackButton
 @onready var web_warning: Label = $WebWarning
+@onready var map_option_button: OptionButton = $MainMenu/PlayMenu/CenterContainer/PlayPanel/Content/TabContainer/Multiplayer/MapOptionButton
 
 var game_manager: GameManager
 var _pending_refresh: bool = false
 var _auto_refresh_timer: Timer
 const AUTO_REFRESH_INTERVAL: float = 5.0
+
+# Track UI state to prevent race conditions
+var _transitioning: bool = false
+var _is_currently_in_game: bool = false
 
 # Settings persistence
 const SETTINGS_FILE_PATH: String = "user://settings.cfg"
@@ -47,11 +59,31 @@ var _base_dpi: float = 96.0
 var _screen_dpi: float = 96.0
 
 func _ready() -> void:
-	game_manager = get_node("../GameManager") as GameManager
+	# Try to find GameManager - works for both main.tscn and Baseplate.tscn layouts
+	game_manager = get_node_or_null("../GameManager") as GameManager
+	if not game_manager:
+		# Fallback: search the tree for GameManager
+		game_manager = get_tree().root.find_child("GameManager", true, false) as GameManager
+	
+	if not game_manager:
+		push_error("[GameUI] Failed to find GameManager in scene!")
+		return
 	
 	# Initialize DPI scaling
 	_calculate_screen_dpi()
 	_apply_dpi_scaling_to_pause_menu()
+	_apply_dpi_scaling_to_game_hud()
+
+	if map_option_button:
+		map_option_button.clear()
+		map_option_button.add_item("Testing Map")
+		map_option_button.set_item_metadata(0, "res://main.tscn")
+		map_option_button.add_item("Baseplate Map")
+		map_option_button.set_item_metadata(1, "res://Baseplate.tscn")
+		# Move to index 1 (after lobby name input) if possible
+		var mp_container = map_option_button.get_parent()
+		if mp_container and mp_container.get_child_count() > 1:
+			mp_container.move_child(map_option_button, 1)
 
 	host_button.pressed.connect(_on_host_pressed)
 	if host_lan_button:
@@ -62,6 +94,10 @@ func _ready() -> void:
 	lobby_list.item_activated.connect(_on_lobby_activated)
 	
 	singleplayer_button.pressed.connect(_on_singleplayer_pressed)
+	
+	play_button.pressed.connect(_on_play_pressed)
+	desktop_quit_button.pressed.connect(_on_desktop_quit_pressed)
+	back_button.pressed.connect(_on_back_pressed)
 	
 	settings_button.pressed.connect(_on_settings_pressed)
 	resume_button.pressed.connect(_on_resume_pressed)
@@ -76,8 +112,6 @@ func _ready() -> void:
 	GDSync.lobbies_received.connect(_on_lobbies_received)
 	GDSync.connected.connect(_on_gdsync_connected_for_refresh)
 	
-	GDSync.client_joined.connect(_on_client_joined_hud)
-	GDSync.client_left.connect(_on_client_left_hud)
 	GDSync.player_data_changed.connect(_on_player_data_changed_hud)
 
 	# Auto-refresh timer: periodically refreshes lobbies while on the main menu
@@ -86,7 +120,13 @@ func _ready() -> void:
 	_auto_refresh_timer.timeout.connect(_on_auto_refresh_timeout)
 	add_child(_auto_refresh_timer)
 
-	show_menu()
+	# Check initial state (fix for scene transitions where signals are missed)
+	if game_manager.is_in_game():
+		show_game()
+		if status_label and GDSync.lobby_get_name() != "":
+			status_label.text = "Playing in: " + GDSync.lobby_get_name()
+	else:
+		show_menu()
 	
 	# Show web warning if running in a browser
 	if OS.has_feature("web"):
@@ -106,12 +146,18 @@ func _ready() -> void:
 	_load_settings()
 
 	# Auto-connect on startup so lobby list is ready immediately (skip on web)
-	if not OS.has_feature("web"):
+	# Only if not already in game
+	if not game_manager.is_in_game() and not OS.has_feature("web"):
 		_start_auto_connect()
 
 
 func _process(_delta: float) -> void:
-	if game_manager.is_in_game():
+	# Safety check for GameManager
+	if not game_manager:
+		return
+	
+	# If we're currently in-game (based on our own tracking), handle game logic
+	if _is_currently_in_game:
 		if Input.is_action_just_pressed("ui_cancel"):
 			if settings_menu.visible:
 				# settings_menu.close() handles saving and emitting close_requested
@@ -120,9 +166,21 @@ func _process(_delta: float) -> void:
 			else:
 				_toggle_pause()
 		
+		# Tab key to show/hide player list (held down shows list, like Minecraft)
+		if Input.is_action_pressed("ui_focus_next"):  # Tab key
+			if player_list:
+				player_list.visible = true
+		else:
+			# Tab released - hide player list
+			if player_list:
+				player_list.visible = false
+		
+		# Hide player list when pause menu or settings are open
 		if pause_menu.visible or settings_menu.visible:
 			game_hud.visible = false
 			reticle.visible = false
+			if player_list:
+				player_list.visible = false
 			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 		else:
 			# In-game: toggle HUD visibility based on mouse capture
@@ -134,9 +192,18 @@ func _process(_delta: float) -> void:
 				reticle.visible = false
 		player_count_label.text = "Players: %d" % game_manager.get_player_count()
 	else:
-		# Not in game — show menu if it's hidden
+		# Not in game — show menu if not already visible
 		if not main_menu.visible and not settings_menu.visible:
 			show_menu()
+		
+		# Hide player list overlay when not in game
+		if player_list:
+			player_list.visible = false
+		
+		# Ensure all game elements are hidden
+		game_hud.visible = false
+		reticle.visible = false
+		pause_menu.visible = false
 		
 		# Allow toggling settings in main menu via ESC?
 		if Input.is_action_just_pressed("ui_cancel") and settings_menu.visible:
@@ -157,7 +224,7 @@ func _on_settings_pressed() -> void:
 	pause_menu.visible = false
 
 func _on_settings_closed() -> void:
-	if game_manager.is_in_game():
+	if _is_currently_in_game:
 		pause_menu.visible = true
 	else:
 		main_menu.visible = true
@@ -170,7 +237,10 @@ func _on_resume_pressed() -> void:
 # ── UI State ────────────────────────────────────────────────────────────────
 
 func show_menu() -> void:
+	_is_currently_in_game = false  # Track that we're back in menu
 	main_menu.visible = true
+	start_screen.visible = true
+	play_menu.visible = false
 	game_hud.visible = false
 	reticle.visible = false
 	pause_menu.visible = false
@@ -184,28 +254,50 @@ func show_menu() -> void:
 		_refresh_lobbies()
 		_auto_refresh_timer.start()
 
+func _on_play_pressed() -> void:
+	start_screen.visible = false
+	play_menu.visible = true
+
+func _on_back_pressed() -> void:
+	start_screen.visible = true
+	play_menu.visible = false
+
+func _on_desktop_quit_pressed() -> void:
+	get_tree().quit()
+
 
 func show_game() -> void:
+	print("[GameUI] show_game() called")
+	_is_currently_in_game = true  # Track that we're in game - this must be set FIRST
+	
 	# Ensure menu is completely hidden
 	main_menu.visible = false
 	pause_menu.visible = false
 	settings_menu.visible = false
+	
 	# Show game HUD and reticle
 	game_hud.visible = true
 	reticle.visible = false
+	
 	# Hide web warning when in-game
 	if web_warning:
 		web_warning.visible = false
+	
 	# Stop auto-refresh while in-game
 	if _auto_refresh_timer:
 		_auto_refresh_timer.stop()
 	
 	if name_label:
 		name_label.text = "Name: " + name_input.text
-	_update_player_list()
+	
+	if player_list:
+		player_list.visible = false
+	
 	# Force mouse mode for gameplay
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	get_tree().call_group("player_controllers", "capture_mouse")
+	
+	print("[GameUI] Game UI shown - main_menu.visible=", main_menu.visible, ", game_hud.visible=", game_hud.visible)
 
 
 
@@ -224,7 +316,12 @@ func _on_host_pressed() -> void:
 	var lobby_name: String = ip_input.text.strip_edges()
 	if lobby_name == "":
 		lobby_name = "Lobby" + str(randi() % 100)
-	game_manager.host_game(lobby_name, name_input.text.strip_edges(), false)
+	
+	var map_path: String = "res://main.tscn"
+	if map_option_button and map_option_button.selected != -1:
+		map_path = map_option_button.get_item_metadata(map_option_button.selected)
+		
+	game_manager.host_game(lobby_name, name_input.text.strip_edges(), false, map_path)
 
 
 func _on_host_lan_pressed() -> void:
@@ -232,7 +329,12 @@ func _on_host_lan_pressed() -> void:
 	var lobby_name: String = ip_input.text.strip_edges()
 	if lobby_name == "":
 		lobby_name = "LAN_Lobby" + str(randi() % 100)
-	game_manager.host_game(lobby_name, name_input.text.strip_edges(), true)
+	
+	var map_path: String = "res://main.tscn"
+	if map_option_button and map_option_button.selected != -1:
+		map_path = map_option_button.get_item_metadata(map_option_button.selected)
+		
+	game_manager.host_game(lobby_name, name_input.text.strip_edges(), true, map_path)
 
 
 func _on_join_pressed() -> void:
@@ -330,11 +432,17 @@ func _on_lobby_activated(index: int) -> void:
 
 
 func _on_connection_status_changed(status: String) -> void:
-	status_label.text = status
+	print("[GameUI] Connection status changed: ", status)
+	if status_label:
+		status_label.text = status
 	if "Playing" in status or "Singleplayer" in status:
+		print("[GameUI] Detected 'Playing' or 'Singleplayer' - showing game")
 		show_game()
 	elif "Disconnected" in status or "failed" in status.to_lower() or "Kicked" in status:
+		print("[GameUI] Detected disconnect - showing menu")
 		show_menu()
+	else:
+		print("[GameUI] Status doesn't match any transition condition: ", status)
 
 
 # ── Settings Persistence ────────────────────────────────────────────────────
@@ -360,27 +468,11 @@ func _load_settings() -> void:
 	# Default if load fails or no name saved
 	name_input.text = "Player" + str(randi() % 1000)
 
-func _on_client_joined_hud(_client_id: int) -> void:
-	_update_player_list()
-
-func _on_client_left_hud(_client_id: int) -> void:
-	_update_player_list()
-
 func _on_player_data_changed_hud(client_id: int, key: String, _value) -> void:
 	if key == "Username":
-		_update_player_list()
 		if client_id == GDSync.get_client_id() and name_label:
 			name_label.text = "Name: " + GDSync.player_get_username(client_id)
 
-func _update_player_list() -> void:
-	if not player_list_display: return
-	player_list_display.clear()
-	var clients: Array = GDSync.lobby_get_all_clients()
-	for client_id: int in clients:
-		var username: String = GDSync.player_get_username(client_id)
-		if username == "":
-			username = "Player " + str(client_id)
-		player_list_display.add_item(username)
 
 
 # ── DPI Scaling ─────────────────────────────────────────────────────────────
@@ -431,7 +523,40 @@ func _apply_dpi_scaling_to_pause_menu() -> void:
 	print("[GameUI] Pause Menu Scaled to: %.0fx%.0f (DPI Scale: %.2f)" % [scaled_width, scaled_height, dpi_scale])
 
 
+func _apply_dpi_scaling_to_game_hud() -> void:
+	"""Apply DPI-aware sizing and positioning to GameHUD at top-left."""
+	if not game_hud or not game_hud.get_child(0):
+		return
+	
+	var vbox: VBoxContainer = game_hud.get_child(0) as VBoxContainer
+	if not vbox:
+		return
+	
+	var dpi_scale: float = _screen_dpi / _base_dpi
+	
+	# Base dimensions (in "logical" pixels at 96 DPI)
+	var base_width: float = 350.0
+	var base_height: float = 250.0
+	var base_padding: float = 10.0
+	
+	# Scale dimensions
+	var scaled_width: float = base_width * dpi_scale
+	var scaled_height: float = base_height * dpi_scale
+	var scaled_padding: float = base_padding * dpi_scale
+	
+	# Apply to VBoxContainer
+	vbox.custom_minimum_size = Vector2(scaled_width, scaled_height)
+	vbox.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	vbox.offset_left = scaled_padding
+	vbox.offset_top = scaled_padding
+	vbox.offset_right = scaled_width + scaled_padding
+	vbox.offset_bottom = scaled_height + scaled_padding
+	
+	print("[GameUI] GameHUD Scaled to: %.0fx%.0f (DPI Scale: %.2f)" % [scaled_width, scaled_height, dpi_scale])
+
+
 func _on_window_resized() -> void:
 	"""Handle window resize events to recalculate DPI if needed."""
 	_calculate_screen_dpi()
 	_apply_dpi_scaling_to_pause_menu()
+	_apply_dpi_scaling_to_game_hud()

@@ -12,6 +12,7 @@ const PLAYER_SCENE_PATH: String = "res://proto_controller.tscn"
 var _pending_action: String = ""
 var _pending_lobby_name: String = ""
 var _pending_local: bool = false
+var _pending_map_path: String = "res://main.tscn"
 var _local_username: String = "Player"
 
 # Track our own spawned node so we don't double-spawn
@@ -43,15 +44,34 @@ func _ready() -> void:
 	GDSync.host_changed.connect(_on_host_changed)
 
 	print("[GameManager] Ready")
+	
+	# Check if we are already connected and in a lobby (e.g. after scene switch)
+	if GDSync.is_active() and GDSync.lobby_get_name() != "":
+		print("[GameManager] Already in lobby: ", GDSync.lobby_get_name())
+		# We might be the host or a client who just switched scenes.
+		# If we are here, GDSync state is preserved.
+		# We should trigger join logic to spawn player if not already spawned.
+		if not _local_player_spawned:
+			# Delay slightly to ensure tree is ready? _ready is fine.
+			_on_lobby_joined(GDSync.lobby_get_name())
+		
+		# Restore host state if needed
+		if GDSync.is_host():
+			_is_host = true
+			_host_client_id = GDSync.get_client_id()
+		else:
+			_is_host = false
+			_host_client_id = GDSync.get_host()
 
 
 # ── Public API ──────────────────────────────────────────────────────────────
 
-func host_game(lobby_name: String, player_name: String, local: bool = false) -> void:
+func host_game(lobby_name: String, player_name: String, local: bool = false, map_path: String = "res://main.tscn") -> void:
 	_local_username = player_name
 	_pending_lobby_name = lobby_name
 	_pending_action = "host"
 	_pending_local = local
+	_pending_map_path = map_path
 
 	connection_status_changed.emit("Connecting...")
 
@@ -151,7 +171,11 @@ func _process_pending_action() -> void:
 
 	if _pending_action == "host":
 		connection_status_changed.emit("Creating lobby...")
-		GDSync.lobby_create(_pending_lobby_name, "", true, 0)
+		var lobby_data = {}
+		if _pending_map_path != "":
+			lobby_data["Map"] = _pending_map_path
+		
+		GDSync.lobby_create(_pending_lobby_name, "", true, 0, {}, lobby_data)
 	elif _pending_action == "join":
 		connection_status_changed.emit("Joining lobby...")
 		GDSync.lobby_join(_pending_lobby_name)
@@ -243,6 +267,24 @@ func _on_lobby_creation_failed(lobby_name: String, error: int) -> void:
 func _on_lobby_joined(lobby_name: String) -> void:
 	print("[GameManager] Joined lobby: ", lobby_name)
 	connection_status_changed.emit("Playing in: " + lobby_name)
+	
+	# Check for map mismatch
+	var current_scene_path: String = get_tree().current_scene.scene_file_path
+	var target_map_path: String = GDSync.lobby_get_data("Map", "")
+	
+	if target_map_path != "" and target_map_path != current_scene_path:
+		print("[GameManager] Map mismatch. Current: %s, Target: %s" % [current_scene_path, target_map_path])
+		
+		# If we are the host and we just created/joined this lobby, we might need to initiate the switch for everyone.
+		if _is_host:
+			print("[GameManager] Host initiating scene switch...")
+			GDSync.change_scene(target_map_path)
+		else:
+			print("[GameManager] Client switching scene locally...")
+			# Client joins an existing game, switch locally to catch up
+			get_tree().change_scene_to_file(target_map_path)
+		return
+
 	# Spawn our own player
 	_spawn_local_player()
 

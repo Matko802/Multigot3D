@@ -40,10 +40,10 @@ extends CharacterBody3D
 	set(value):
 		sync_head_tilt = value
 		if is_node_ready() and head:
-			var basis := head.transform.basis
-			basis = Basis.IDENTITY
-			basis = basis.rotated(Vector3.RIGHT, value)
-			head.transform.basis = basis
+			var head_basis := head.transform.basis
+			head_basis = Basis.IDENTITY
+			head_basis = head_basis.rotated(Vector3.RIGHT, value)
+			head.transform.basis = head_basis
 
 
 
@@ -360,10 +360,10 @@ func _rotate_look(rot_input: Vector2) -> void:
 	look_rotation.x = clampf(look_rotation.x, deg_to_rad(-85.0), deg_to_rad(85.0))
 	look_rotation.y -= rot_input.x * effective_look_speed
 
-	transform.basis = Basis()
+	transform.basis = Basis.IDENTITY
 	rotate_y(look_rotation.y)
 
-	head.transform.basis = Basis()
+	head.transform.basis = Basis.IDENTITY
 	head.rotate_x(look_rotation.x)
 	
 	# Sync head tilt across network

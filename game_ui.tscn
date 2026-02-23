@@ -2,6 +2,8 @@
 
 [ext_resource type="Script" uid="uid://d3ernxe43kg8t" path="res://game_ui.gd" id="1_abc"]
 [ext_resource type="PackedScene" uid="uid://bn8xr0e7bjkua" path="res://settings.tscn" id="2_mj8uy"]
+[ext_resource type="PackedScene" uid="uid://cbsf0a8witavb" path="res://player_list.tscn" id="3_3rlp6"]
+[ext_resource type="FontFile" uid="uid://cavwo80hoissy" path="res://ttf/JetBrainsMono-Bold.ttf" id="3_obik5"]
 
 [node name="GameUI" type="CanvasLayer" unique_id=1356119558]
 script = ExtResource("1_abc")
@@ -23,7 +25,7 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.16078432, 0.17254902, 0.1882353, 1)
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MainMenu" unique_id=1907966240]
+[node name="StartScreen" type="VBoxContainer" parent="MainMenu" unique_id=1907966240]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -33,52 +35,101 @@ anchor_bottom = 0.5
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Title" type="Label" parent="MainMenu/VBoxContainer" unique_id=496576689]
+[node name="Title" type="Label" parent="MainMenu/StartScreen" unique_id=496576689]
 layout_mode = 2
 text = "Multiplayer Game"
 
-[node name="SingleplayerButton" type="Button" parent="MainMenu/VBoxContainer" unique_id=997589260]
+[node name="PlayButton" type="Button" parent="MainMenu/StartScreen" unique_id=1762312443]
 layout_mode = 2
-text = "Singleplayer"
+text = "Play"
 
-[node name="HostButton" type="Button" parent="MainMenu/VBoxContainer" unique_id=456673693]
-layout_mode = 2
-text = "Host Online"
-
-[node name="HostLANButton" type="Button" parent="MainMenu/VBoxContainer" unique_id=1860163996]
-layout_mode = 2
-text = "Host LAN"
-
-[node name="IPInput" type="LineEdit" parent="MainMenu/VBoxContainer" unique_id=689837775]
-layout_mode = 2
-placeholder_text = "Lobby Name"
-
-[node name="StatusLabel" type="Label" parent="MainMenu/VBoxContainer" unique_id=1125219344]
-layout_mode = 2
-
-[node name="NameInput" type="LineEdit" parent="MainMenu/VBoxContainer" unique_id=1256711025]
-layout_mode = 2
-placeholder_text = "Enter Player Name"
-
-[node name="LobbyList" type="ItemList" parent="MainMenu/VBoxContainer" unique_id=9811485]
-custom_minimum_size = Vector2(0, 300)
-layout_mode = 2
-
-[node name="LobbyControl" type="HBoxContainer" parent="MainMenu/VBoxContainer" unique_id=746513071]
-layout_mode = 2
-
-[node name="RefreshButton" type="Button" parent="MainMenu/VBoxContainer/LobbyControl" unique_id=1891507755]
-layout_mode = 2
-text = "Refresh Lobbies"
-
-[node name="JoinSelectedButton" type="Button" parent="MainMenu/VBoxContainer/LobbyControl" unique_id=855642296]
-layout_mode = 2
-text = "Join Selected"
-
-[node name="SettingsButton" type="Button" parent="MainMenu/VBoxContainer" unique_id=1624559803]
+[node name="SettingsButton" type="Button" parent="MainMenu/StartScreen" unique_id=1624559803]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Settings"
+
+[node name="DesktopQuitButton" type="Button" parent="MainMenu/StartScreen" unique_id=64948720]
+layout_mode = 2
+text = "Quit"
+
+[node name="PlayMenu" type="Control" parent="MainMenu" unique_id=1625036288]
+visible = false
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="CenterContainer" type="CenterContainer" parent="MainMenu/PlayMenu" unique_id=960170614]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="PlayPanel" type="PanelContainer" parent="MainMenu/PlayMenu/CenterContainer" unique_id=966829235]
+custom_minimum_size = Vector2(800, 600)
+layout_mode = 2
+
+[node name="Content" type="VBoxContainer" parent="MainMenu/PlayMenu/CenterContainer/PlayPanel" unique_id=1406211922]
+layout_mode = 2
+
+[node name="TabContainer" type="TabContainer" parent="MainMenu/PlayMenu/CenterContainer/PlayPanel/Content" unique_id=65267745]
+layout_mode = 2
+size_flags_vertical = 3
+current_tab = 0
+
+[node name="Singleplayer" type="VBoxContainer" parent="MainMenu/PlayMenu/CenterContainer/PlayPanel/Content/TabContainer" unique_id=486900818]
+layout_mode = 2
+alignment = 1
+metadata/_tab_index = 0
+
+[node name="SingleplayerButton" type="Button" parent="MainMenu/PlayMenu/CenterContainer/PlayPanel/Content/TabContainer/Singleplayer" unique_id=997589260]
+layout_mode = 2
+text = "Singleplayer"
+
+[node name="Multiplayer" type="VBoxContainer" parent="MainMenu/PlayMenu/CenterContainer/PlayPanel/Content/TabContainer" unique_id=639397618]
+visible = false
+layout_mode = 2
+metadata/_tab_index = 1
+
+[node name="IPInput" type="LineEdit" parent="MainMenu/PlayMenu/CenterContainer/PlayPanel/Content/TabContainer/Multiplayer" unique_id=689837775]
+layout_mode = 2
+placeholder_text = "Lobby Name"
+
+[node name="HostButton" type="Button" parent="MainMenu/PlayMenu/CenterContainer/PlayPanel/Content/TabContainer/Multiplayer" unique_id=456673693]
+layout_mode = 2
+text = "Host Online"
+
+[node name="HostLANButton" type="Button" parent="MainMenu/PlayMenu/CenterContainer/PlayPanel/Content/TabContainer/Multiplayer" unique_id=1860163996]
+layout_mode = 2
+text = "Host LAN"
+
+[node name="LobbyList" type="ItemList" parent="MainMenu/PlayMenu/CenterContainer/PlayPanel/Content/TabContainer/Multiplayer" unique_id=9811485]
+custom_minimum_size = Vector2(0, 300)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="LobbyControl" type="HBoxContainer" parent="MainMenu/PlayMenu/CenterContainer/PlayPanel/Content/TabContainer/Multiplayer" unique_id=746513071]
+layout_mode = 2
+
+[node name="RefreshButton" type="Button" parent="MainMenu/PlayMenu/CenterContainer/PlayPanel/Content/TabContainer/Multiplayer/LobbyControl" unique_id=1891507755]
+layout_mode = 2
+text = "Refresh Lobbies"
+
+[node name="JoinSelectedButton" type="Button" parent="MainMenu/PlayMenu/CenterContainer/PlayPanel/Content/TabContainer/Multiplayer/LobbyControl" unique_id=855642296]
+layout_mode = 2
+text = "Join Selected"
+
+[node name="StatusLabel" type="Label" parent="MainMenu/PlayMenu/CenterContainer/PlayPanel/Content/TabContainer/Multiplayer" unique_id=1125219344]
+layout_mode = 2
+
+[node name="MapOptionButton" type="OptionButton" parent="MainMenu/PlayMenu/CenterContainer/PlayPanel/Content/TabContainer/Multiplayer" unique_id=595653468]
+layout_mode = 2
+
+[node name="NameInput" type="LineEdit" parent="MainMenu/PlayMenu/CenterContainer/PlayPanel/Content" unique_id=1256711025]
+layout_mode = 2
+placeholder_text = "Enter Player Name"
+
+[node name="BackButton" type="Button" parent="MainMenu/PlayMenu/CenterContainer/PlayPanel/Content" unique_id=1001404345]
+layout_mode = 2
+text = "Back"
 
 [node name="Reticle" type="Control" parent="." unique_id=478643172]
 layout_mode = 3
@@ -181,28 +232,44 @@ unique_name_in_owner = true
 [node name="WebWarning" type="Label" parent="." unique_id=634965473]
 unique_name_in_owner = true
 visible = false
-modulate = Color(1, 0.85, 0.2, 1)
+modulate = Color(1, 1, 0, 1)
 offset_left = 10.0
 offset_top = 10.0
 offset_right = 610.0
 offset_bottom = 30.0
-text = "⚠ Web build: Multiplayer features are not supported. Use Singleplayer mode."
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.32156864)
+theme_override_fonts/font = ExtResource("3_obik5")
+text = "Multiplayer features are not supported on Web build. Use Singleplayer mode!"
+horizontal_alignment = 1
+vertical_alignment = 1
 
-[node name="GameHUD" type="Control" parent="." unique_id=654300937]
+[node name="PlayerList" parent="." unique_id=1089836397 instance=ExtResource("3_3rlp6")]
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="GameHUD" type="Control" parent="." unique_id=102274436]
+visible = false
 layout_mode = 3
-anchors_preset = 0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="GameHUD" unique_id=1638931501]
+[node name="VBoxContainer" type="VBoxContainer" parent="GameHUD" unique_id=1483976544]
+custom_minimum_size = Vector2(350, 250)
 layout_mode = 0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 360.0
+offset_bottom = 260.0
 
-[node name="PlayerCountLabel" type="Label" parent="GameHUD/VBoxContainer" unique_id=1880610006]
+[node name="PlayerCountLabel" type="Label" parent="GameHUD/VBoxContainer" unique_id=227354328]
 layout_mode = 2
 
-[node name="DisconnectButton" type="Button" parent="GameHUD/VBoxContainer" unique_id=1417536419]
+[node name="NameLabel" type="Label" parent="GameHUD/VBoxContainer" unique_id=1690798861]
 layout_mode = 2
 
-[node name="NameLabel" type="Label" parent="GameHUD/VBoxContainer" unique_id=1084603678]
-layout_mode = 2
-
-[node name="PlayerList" type="ItemList" parent="GameHUD/VBoxContainer" unique_id=889424765]
+[node name="DisconnectButton" type="Button" parent="GameHUD/VBoxContainer" unique_id=1079058844]
 layout_mode = 2
